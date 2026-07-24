@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Translatuhh — Live Tab & Mic Translator</title>
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles.css">
+    <script>
+      // Apply theme immediately to avoid flash of light/dark mode
+      const savedTheme = localStorage.getItem("theme") || "dark";
+      document.documentElement.setAttribute("data-theme", savedTheme);
+    </script>
+  </head>
+  <body>
+    <main class="app-shell">
+      <section class="watch-pane" aria-label="Shared video preview">
+        <div class="topbar">
+          <div>
+            <p class="eyebrow">Live Speech Translator</p>
+            <h1>Translatuhh</h1>
+          </div>
+          <div class="topbar-actions">
+            <!-- API Status Badge -->
+            <div class="api-badge" id="apiBadge" title="Checking API status...">
+              <span class="badge-dot"></span>
+              <span class="badge-text">Checking API...</span>
+            </div>
+            
+            <!-- Live Capture Status -->
+            <div class="status-pill" id="statusPill">
+              <span class="status-dot"></span>
+              Idle
+            </div>
+
+            <!-- Theme Toggle Button -->
+            <button class="theme-toggle" id="themeToggle" type="button" aria-label="Toggle light and dark theme" title="Toggle theme">
+              <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+              <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            </button>
+          </div>
+        </div>
+
+        <div class="preview-frame">
+          <video id="previewVideo" autoplay muted playsinline></video>
+          <div class="empty-preview" id="emptyPreview">
+            <div class="empty-preview-content">
+              <svg class="preview-placeholder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+              <span id="emptyPreviewText">Start capture to preview feed here.</span>
+            </div>
+          </div>
+          <canvas id="audioMeter" width="720" height="96" aria-label="Audio level visualization"></canvas>
+        </div>
+
+        <div class="support-note" id="supportNote" hidden></div>
+
+        <div class="controls" aria-label="Capture controls">
+          <div class="control-row">
+            <!-- Source Selector -->
+            <label class="select-label" for="audioSource">
+              Input Source
+              <select id="audioSource">
+                <option value="tab">Tab Audio (Browser)</option>
+                <option value="mic">Microphone (Device)</option>
+              </select>
+            </label>
+
+            <!-- Target Language Selector -->
+            <label class="select-label" for="targetLanguage">
+              Translate to
+              <select id="targetLanguage">
+                <option>English</option>
+                <option>Hindi</option>
+                <option>Bengali</option>
+                <option>Gujarati</option>
+                <option>Kannada</option>
+                <option>Malayalam</option>
+                <option>Marathi</option>
+                <option>Odia</option>
+                <option>Punjabi</option>
+                <option>Tamil</option>
+                <option>Telugu</option>
+                <option>Assamese</option>
+                <option>Nepali</option>
+                <option>Urdu</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="action-row">
+            <button class="primary-button" id="shareButton" type="button">
+              <span class="play-icon" aria-hidden="true">▶</span>
+              Start Capture
+            </button>
+            <button class="icon-button" id="stopButton" type="button" aria-label="Stop capture" title="Stop capture" disabled>
+              Stop
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="translation-pane" aria-label="Translated captions">
+        <div class="pane-header">
+          <div>
+            <p class="eyebrow">Detected Language</p>
+            <h2 id="detectedLanguage">Waiting</h2>
+          </div>
+          
+          <div class="pane-controls">
+            <!-- Font Sizing controls -->
+            <div class="font-controls" title="Adjust text size">
+              <button class="size-btn" id="fontSizeDec" type="button" aria-label="Decrease text size">A-</button>
+              <span class="size-label">Size</span>
+              <button class="size-btn" id="fontSizeInc" type="button" aria-label="Increase text size">A+</button>
+            </div>
+
+            <!-- Scroll Pause -->
+            <label class="scroll-pause-label" title="Pause auto-scroll to read text">
+              <input type="checkbox" id="pauseScroll">
+              <span>Pause Scroll</span>
+            </label>
+
+            <!-- Action buttons -->
+            <button class="ghost-button" id="exportButton" type="button" title="Download full transcript">Export</button>
+            <button class="ghost-button" id="clearButton" type="button">Clear</button>
+          </div>
+        </div>
+
+        <div class="caption-list" id="captionList" data-size="medium">
+          <article class="caption-card muted">
+            <p class="original">No captions yet.</p>
+            <p class="translated">Select your audio source and click "Start Capture". Converted text and translations will appear here in real-time.</p>
+          </article>
+        </div>
+      </aside>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>
