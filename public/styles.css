@@ -842,6 +842,23 @@ button:disabled {
 
 
 
+/* Bright, Eye-Catching PWA Install Button */
+.pwa-install-btn {
+  background: rgba(13, 242, 201, 0.15) !important;
+  border: 1.5px solid var(--accent-cyan) !important;
+  color: var(--accent-cyan) !important;
+  font-weight: 800 !important;
+  box-shadow: 0 0 14px rgba(13, 242, 201, 0.25) !important;
+  transition: var(--transition-smooth) !important;
+}
+
+.pwa-install-btn:hover {
+  background: var(--accent-cyan) !important;
+  color: #05070c !important;
+  box-shadow: 0 0 20px rgba(13, 242, 201, 0.5) !important;
+  transform: translateY(-1px);
+}
+
 @media (max-width: 520px) {
   .app-shell {
     padding: 12px;
