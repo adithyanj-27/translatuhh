@@ -838,6 +838,20 @@ button:disabled {
   .translation-pane {
     height: 520px;
   }
+
+  .action-row {
+    flex-direction: column !important;
+    gap: 14px !important;
+    width: 100% !important;
+  }
+
+  .primary-button,
+  .launch-pip-btn,
+  .icon-button {
+    width: 100% !important;
+    flex: none !important;
+    height: 64px !important;
+  }
 }
 
 
@@ -920,14 +934,7 @@ button:disabled {
     justify-content: center;
   }
   
-  .action-row {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .primary-button, .pip-button, .icon-button {
-    width: 100%;
-  }
+
 
   .pane-header {
     flex-direction: column;
