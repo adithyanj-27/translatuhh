@@ -1,4 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
     <radialGradient id="bgGlow" cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="#0df2c9" stop-opacity="0.25"/>
@@ -47,4 +54,11 @@
     <path d="M 370 150 A 70 70 0 0 1 370 260" fill="none" stroke="url(#waveGrad)" stroke-width="14" stroke-linecap="round" filter="url(#neonGlow)"/>
     <path d="M 405 125 A 100 100 0 0 1 405 285" fill="none" stroke="url(#waveGrad)" stroke-width="14" stroke-linecap="round" filter="url(#neonGlow)"/>
   </g>
-</svg>
+</svg>`;
+
+fs.writeFileSync(path.join(__dirname, '../public/logo.svg'), svgContent);
+fs.writeFileSync(path.join(__dirname, '../public/logo.png'), svgContent);
+fs.writeFileSync(path.join(__dirname, '../public/icon-192.png'), svgContent);
+fs.writeFileSync(path.join(__dirname, '../public/icon-512.png'), svgContent);
+
+console.log("Clean vector logo updated successfully!");
