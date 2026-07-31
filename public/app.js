@@ -562,11 +562,13 @@ async function checkApiStatus() {
   }
 }
 
-// Service Worker & PWA Support
+// Service Worker & PWA Support (Network-First Auto-Update)
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
-    navigator.serviceWorker.register("/sw.js").catch((err) => {
-      console.log("Service Worker registration failed:", err);
+    navigator.serviceWorker.register("/sw.js").then((reg) => {
+      reg.update();
+    }).catch((err) => {
+      console.log("Service Worker registration note:", err);
     });
   });
 }

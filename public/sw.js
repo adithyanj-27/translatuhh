@@ -1,22 +1,25 @@
-const CACHE_NAME = "translatuhh-v1";
+const CACHE_NAME = "translatuhh-v2";
 const ASSETS = [
   "/",
   "/index.html",
   "/styles.css",
   "/app.js",
-  "/manifest.json"
+  "/manifest.json",
+  "/logo.png"
 ];
 
 self.addEventListener("install", (event) => {
+  // Immediately activate new service worker versions
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
     })
   );
-  self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
+  // Delete all old cache stores immediately
   event.waitUntil(
     caches.keys().then((keys) => {
       return Promise.all(
@@ -31,18 +34,27 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+// Network-First Strategy: Always fetch fresh content from server first
 self.addEventListener("fetch", (event) => {
-  // Pass API requests directly to network
-  if (event.request.url.includes("/api/")) {
+  // Skip non-GET and API requests
+  if (event.request.method !== "GET" || event.request.url.includes("/api/")) {
     return;
   }
 
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-      return fetch(event.request);
-    })
+    fetch(event.request)
+      .then((networkResponse) => {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseToCache = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, responseToCache);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(() => {
+        // Fallback to cache ONLY if network fails (offline mode)
+        return caches.match(event.request);
+      })
   );
 });
