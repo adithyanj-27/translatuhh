@@ -501,61 +501,71 @@ select:focus {
   outline: none;
 }
 
-/* Primary Start Capture Button */
-.primary-button {
-  flex: 1.2;
-  min-width: 150px;
-  background: linear-gradient(135deg, var(--accent-cyan) 0%, #0284c7 100%);
-  border: none;
-  color: #04070d;
-  box-shadow: 0 4px 20px rgba(var(--accent-cyan-rgb), 0.35);
+/* Primary Start Floating Subtitles Button */
+.primary-button,
+.launch-pip-btn {
+  flex: 3;
+  height: 56px !important;
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  border-radius: 16px !important;
+  padding: 0 28px !important;
+  background: linear-gradient(135deg, var(--accent-cyan) 0%, #0284c7 100%) !important;
+  border: none !important;
+  color: #04070d !important;
+  box-shadow: 0 6px 24px rgba(var(--accent-cyan-rgb), 0.3) !important;
+  transition: var(--transition-smooth) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
 }
 
-.primary-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(var(--accent-cyan-rgb), 0.5);
+.primary-button:hover:not(:disabled),
+.launch-pip-btn:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 30px rgba(var(--accent-cyan-rgb), 0.5) !important;
   filter: brightness(1.08);
 }
 
-.primary-button .play-icon {
+.primary-button .play-icon,
+.launch-pip-btn .play-icon {
   font-size: 0.8rem;
 }
 
 /* PiP Floating Overlay Button */
 .pip-button {
-  flex: 1.2;
-  min-width: 170px;
+  height: 56px;
+  border-radius: 16px;
   background: rgba(139, 92, 246, 0.14);
   border: 1px solid rgba(139, 92, 246, 0.45);
   color: #c4b5fd;
   box-shadow: 0 4px 18px rgba(139, 92, 246, 0.2);
 }
 
-.pip-button:hover:not(:disabled) {
-  background: rgba(139, 92, 246, 0.25);
-  border-color: var(--accent-purple);
-  color: #ffffff;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 24px rgba(139, 92, 246, 0.4);
-}
-
-.pip-button.is-active {
-  background: var(--accent-purple);
-  color: #ffffff;
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.6);
-}
-
 /* Stop Button */
 .icon-button {
-  min-width: 75px;
-  border: 1px solid var(--control-border);
-  background: var(--control-bg);
-  color: var(--accent-rose);
+  flex: 1;
+  height: 56px !important;
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  border-radius: 16px !important;
+  border: 1px solid var(--control-border) !important;
+  background: var(--control-bg) !important;
+  color: var(--accent-rose) !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: var(--transition-smooth) !important;
 }
 
 .icon-button:hover:not(:disabled) {
-  background: rgba(244, 63, 94, 0.15);
-  border-color: var(--accent-rose);
+  background: rgba(244, 63, 94, 0.15) !important;
+  border-color: var(--accent-rose) !important;
+  transform: translateY(-2px) !important;
 }
 
 .ghost-button {

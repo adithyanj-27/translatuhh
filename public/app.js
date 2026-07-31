@@ -56,8 +56,10 @@ function setSupportMessage() {
 }
 
 function setStatus(label, isLive = false) {
-  statusPill.lastChild.textContent = ` ${label}`;
-  statusPill.classList.toggle("is-live", isLive);
+  if (statusPill) {
+    statusPill.lastChild.textContent = ` ${label}`;
+    statusPill.classList.toggle("is-live", isLive);
+  }
 }
 
 function resetMeter() {
@@ -553,6 +555,7 @@ exportButton.addEventListener("click", () => {
 // Check backend API Key status
 async function checkApiStatus() {
   const apiBadge = document.querySelector("#apiBadge");
+  if (!apiBadge) return;
   const badgeDot = apiBadge.querySelector(".badge-dot");
   const badgeText = apiBadge.querySelector(".badge-text");
 
