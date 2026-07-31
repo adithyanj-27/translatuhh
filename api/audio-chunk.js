@@ -143,32 +143,46 @@ export default async function handler(req, res) {
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");
 
-    if (hasRealApiKey && body.length > 0) {
-      // 1. Transcribe audio with Google Speech-to-Text
-      const transcript = await transcribeWithGoogle(body, apiKey);
+    if (hasRealApiKey) {
+      if (body.length > 0) {
+        // 1. Transcribe audio with Google Speech-to-Text
+        const transcript = await transcribeWithGoogle(body, apiKey);
 
-      if (transcript.original) {
-        // 2. Translate text with Google Translation API
-        const translation = await translateWithGoogle(
-          transcript.original,
-          targetLanguage,
-          apiKey
-        );
+        if (transcript.original) {
+          // 2. Translate text with Google Translation API
+          const translation = await translateWithGoogle(
+            transcript.original,
+            targetLanguage,
+            apiKey
+          );
 
-        return res.status(200).json({
-          id: randomUUID(),
-          mode: "google",
-          receivedBytes: body.length,
-          targetLanguage,
-          detectedLanguage: transcript.detectedLanguage || translation.detectedLanguage || "auto",
-          original: transcript.original,
-          translated: translation.translated,
-          createdAt: new Date().toISOString()
-        });
+          return res.status(200).json({
+            id: randomUUID(),
+            mode: "google",
+            receivedBytes: body.length,
+            targetLanguage,
+            detectedLanguage: transcript.detectedLanguage || translation.detectedLanguage || "auto",
+            original: transcript.original,
+            translated: translation.translated,
+            createdAt: new Date().toISOString()
+          });
+        }
       }
+
+      // Return empty translation if silent chunk
+      return res.status(200).json({
+        id: randomUUID(),
+        mode: "google",
+        receivedBytes: body.length,
+        targetLanguage,
+        detectedLanguage: "auto",
+        original: "",
+        translated: "",
+        createdAt: new Date().toISOString()
+      });
     }
 
-    // Fallback to Demo Mode if no key or silence
+    // Fallback to Demo Mode ONLY if API key is not configured
     const caption = demoLines[captionIndex % demoLines.length];
     captionIndex += 1;
 

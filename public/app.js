@@ -48,10 +48,14 @@ const isLikelyMobile = matchMedia("(max-width: 860px), (pointer: coarse)").match
 const sizeSteps = ["small", "medium", "large", "xlarge"];
 
 function setSupportMessage() {
-  if (!canShareScreen) {
+  if (!window.isSecureContext) {
     supportNote.hidden = false;
     supportNote.textContent =
-      "System audio capture is restricted on this browser context.";
+      "Secure context (HTTPS) is required for audio/mic capture. If testing on mobile, please open the deployed HTTPS site.";
+  } else if (!canShareScreen) {
+    supportNote.hidden = false;
+    supportNote.textContent =
+      "System audio capture is restricted on this browser context. Microphone audio will be used instead.";
   }
 }
 
@@ -405,6 +409,12 @@ function getSupportedMimeType() {
 }
 
 async function startCapture() {
+  if (!window.isSecureContext) {
+    setStatus("HTTPS required");
+    alert("Audio capture requires a secure context (HTTPS). If testing on a mobile device, please access the deployed HTTPS Vercel URL.");
+    pipButton.disabled = false;
+    return;
+  }
   try {
     pipButton.disabled = true;
     setStatus("Accessing audio");

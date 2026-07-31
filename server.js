@@ -175,26 +175,40 @@ async function handleAudioChunk(request, response) {
     apiKey.trim() !== ""
   );
 
-  if (hasRealApiKey && body.length > 0) {
-    const transcript = await transcribeWithGoogle(body, apiKey);
-    if (transcript.original) {
-      const translation = await translateWithGoogle(
-        transcript.original,
-        targetLanguage,
-        apiKey
-      );
-      sendJson(response, 200, {
-        id: randomUUID(),
-        mode: "google",
-        receivedBytes: body.length,
-        targetLanguage,
-        detectedLanguage: transcript.detectedLanguage || translation.detectedLanguage || "auto",
-        original: transcript.original,
-        translated: translation.translated,
-        createdAt: new Date().toISOString()
-      });
-      return;
+  if (hasRealApiKey) {
+    if (body.length > 0) {
+      const transcript = await transcribeWithGoogle(body, apiKey);
+      if (transcript.original) {
+        const translation = await translateWithGoogle(
+          transcript.original,
+          targetLanguage,
+          apiKey
+        );
+        sendJson(response, 200, {
+          id: randomUUID(),
+          mode: "google",
+          receivedBytes: body.length,
+          targetLanguage,
+          detectedLanguage: transcript.detectedLanguage || translation.detectedLanguage || "auto",
+          original: transcript.original,
+          translated: translation.translated,
+          createdAt: new Date().toISOString()
+        });
+        return;
+      }
     }
+    // Return empty translation if silent chunk
+    sendJson(response, 200, {
+      id: randomUUID(),
+      mode: "google",
+      receivedBytes: body.length,
+      targetLanguage,
+      detectedLanguage: "auto",
+      original: "",
+      translated: "",
+      createdAt: new Date().toISOString()
+    });
+    return;
   }
 
   const caption = demoLines[captionIndex % demoLines.length];
