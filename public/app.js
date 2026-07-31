@@ -608,7 +608,14 @@ const pwaBanner = document.querySelector("#pwaBanner");
 const bannerInstallBtn = document.querySelector("#bannerInstallBtn");
 const bannerDismissBtn = document.querySelector("#bannerDismissBtn");
 
+// Check if PWA is already running in standalone mode
+const isStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone;
+if (isStandalone && installPwaBtn) {
+  installPwaBtn.style.display = "none";
+}
+
 window.addEventListener("beforeinstallprompt", (e) => {
+  if (isStandalone) return;
   e.preventDefault();
   deferredPrompt = e;
   if (installPwaBtn) {
@@ -617,6 +624,13 @@ window.addEventListener("beforeinstallprompt", (e) => {
   if (pwaBanner && !sessionStorage.getItem("pwa_banner_dismissed")) {
     pwaBanner.style.display = "flex";
   }
+});
+
+window.addEventListener("appinstalled", () => {
+  console.log("Translatuhh PWA installed successfully");
+  if (installPwaBtn) installPwaBtn.style.display = "none";
+  if (pwaBanner) pwaBanner.style.display = "none";
+  deferredPrompt = null;
 });
 
 async function triggerPwaInstall() {
