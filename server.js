@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
 
 const __dirname = fileURLToPath(new URL(".", import.meta.url));
 const publicDir = join(__dirname, "public");
@@ -38,51 +39,47 @@ const mimeTypes = {
   ".ico": "image/x-icon"
 };
 
+const googleLanguageCodes = {
+  English: "en",
+  Hindi: "hi",
+  Bengali: "bn",
+  Gujarati: "gu",
+  Kannada: "kn",
+  Malayalam: "ml",
+  Marathi: "mr",
+  Odia: "or",
+  Punjabi: "pa",
+  Tamil: "ta",
+  Telugu: "te",
+  Assamese: "as",
+  Nepali: "ne",
+  Urdu: "ur",
+  Spanish: "es",
+  French: "fr",
+  German: "de",
+  Japanese: "ja",
+  Chinese: "zh"
+};
+
 const demoLines = [
   {
-    detectedLanguage: "hi-IN",
+    detectedLanguage: "hi",
     original: "नमस्ते, यह एक लाइव वीडियो है।",
     translated: "Hello, this is a live video."
   },
   {
-    detectedLanguage: "ta-IN",
+    detectedLanguage: "ta",
     original: "இப்போது என்ன நடக்கிறது என்பதை பார்க்கலாம்.",
     translated: "Now let's see what is happening."
   },
   {
-    detectedLanguage: "te-IN",
-    original: "చూసినందుకు ధన్యవాదాలు.",
+    detectedLanguage: "te",
+    original: "చూసినందుకు ధన్యவாదాలు.",
     translated: "Thank you for watching."
   }
 ];
 
 let captionIndex = 0;
-
-const languageCodes = {
-  Assamese: "as-IN",
-  Bengali: "bn-IN",
-  Bodo: "brx-IN",
-  Dogri: "doi-IN",
-  English: "en-IN",
-  Gujarati: "gu-IN",
-  Hindi: "hi-IN",
-  Kannada: "kn-IN",
-  Kashmiri: "ks-IN",
-  Konkani: "kok-IN",
-  Maithili: "mai-IN",
-  Malayalam: "ml-IN",
-  Manipuri: "mni-IN",
-  Marathi: "mr-IN",
-  Nepali: "ne-IN",
-  Odia: "od-IN",
-  Punjabi: "pa-IN",
-  Sanskrit: "sa-IN",
-  Santali: "sat-IN",
-  Sindhi: "sd-IN",
-  Tamil: "ta-IN",
-  Telugu: "te-IN",
-  Urdu: "ur-IN"
-};
 
 async function readRequestBody(request) {
   const chunks = [];
@@ -100,25 +97,95 @@ function sendJson(response, statusCode, body) {
   response.end(JSON.stringify(body));
 }
 
+async function transcribeWithGoogle(audioBuffer, apiKey) {
+  const base64Audio = audioBuffer.toString("base64");
+  
+  const response = await fetch(
+    `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        config: {
+          encoding: "WEBM_OPUS",
+          sampleRateHertz: 48000,
+          languageCode: "en-US",
+          alternativeLanguageCodes: [
+            "hi-IN", "ta-IN", "te-IN", "bn-IN", "gu-IN", 
+            "mr-IN", "ml-IN", "kn-IN", "es-ES", "fr-FR", "de-DE"
+          ]
+        },
+        audio: {
+          content: base64Audio
+        }
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Google Speech STT error:", errorText);
+    return { original: "", detectedLanguage: "auto" };
+  }
+
+  const data = await response.json();
+  const transcript = data.results?.[0]?.alternatives?.[0]?.transcript?.trim() || "";
+  const detectedLanguage = data.results?.[0]?.languageCode || "auto";
+
+  return { original: transcript, detectedLanguage };
+}
+
+async function translateWithGoogle(text, targetLanguage, apiKey) {
+  const targetCode = googleLanguageCodes[targetLanguage] || "en";
+
+  const response = await fetch(
+    `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        q: text,
+        target: targetCode,
+        format: "text"
+      })
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Google Translate error:", errorText);
+    return { translated: text, detectedLanguage: "auto" };
+  }
+
+  const data = await response.json();
+  const translated = data.data?.translations?.[0]?.translatedText || text;
+  const detectedLanguage = data.data?.translations?.[0]?.detectedSourceLanguage || "auto";
+
+  return { translated, detectedLanguage };
+}
+
 async function handleAudioChunk(request, response) {
   const body = await readRequestBody(request);
   const targetLanguage = request.headers["x-target-language"] || "English";
+  const apiKey = process.env.GOOGLE_API_KEY;
 
-  const hasRealApiKey = process.env.SARVAM_API_KEY &&
-                        process.env.SARVAM_API_KEY !== "your_sarvam_api_key_here" &&
-                        process.env.SARVAM_API_KEY.trim() !== "";
+  const hasRealApiKey = Boolean(
+    apiKey &&
+    apiKey !== "your_google_api_key_here" &&
+    apiKey.trim() !== ""
+  );
 
-  if (hasRealApiKey) {
-    const transcript = await transcribeWithSarvam(body, request.headers["content-type"]);
+  if (hasRealApiKey && body.length > 0) {
+    const transcript = await transcribeWithGoogle(body, apiKey);
     if (transcript.original) {
-      const translation = await translateWithSarvam(
+      const translation = await translateWithGoogle(
         transcript.original,
-        transcript.detectedLanguage,
-        targetLanguage
+        targetLanguage,
+        apiKey
       );
       sendJson(response, 200, {
-        id: crypto.randomUUID(),
-        mode: "sarvam",
+        id: randomUUID(),
+        mode: "google",
         receivedBytes: body.length,
         targetLanguage,
         detectedLanguage: transcript.detectedLanguage || translation.detectedLanguage || "auto",
@@ -133,11 +200,8 @@ async function handleAudioChunk(request, response) {
   const caption = demoLines[captionIndex % demoLines.length];
   captionIndex += 1;
 
-  // This is the exact integration boundary for a real STT + translation service.
-  // Replace the demo response with a call that transcribes `body`, detects language,
-  // translates to `targetLanguage`, then returns the same JSON shape.
   sendJson(response, 200, {
-    id: crypto.randomUUID(),
+    id: randomUUID(),
     mode: "demo",
     receivedBytes: body.length,
     targetLanguage,
@@ -149,74 +213,6 @@ async function handleAudioChunk(request, response) {
         : `[${targetLanguage}] ${caption.translated}`,
     createdAt: new Date().toISOString()
   });
-}
-
-async function transcribeWithSarvam(audioBuffer, contentType = "audio/webm") {
-  const form = new FormData();
-  const blob = new Blob([audioBuffer], {
-    type: contentType?.split(";")[0] || "audio/webm"
-  });
-
-  form.append("file", blob, "chunk.webm");
-  form.append("model", "saaras:v3");
-  form.append("mode", "transcribe");
-  form.append("language_code", "unknown");
-
-  const sarvamResponse = await fetch("https://api.sarvam.ai/speech-to-text", {
-    method: "POST",
-    headers: {
-      "api-subscription-key": process.env.SARVAM_API_KEY
-    },
-    body: form
-  });
-
-  if (!sarvamResponse.ok) {
-    const errorText = await sarvamResponse.text();
-    throw new Error(`Sarvam speech-to-text failed with ${sarvamResponse.status}: ${errorText}`);
-  }
-
-  const result = await sarvamResponse.json();
-  const original = result?.transcript?.trim() || "";
-  const detectedLanguage = result?.language_code || "auto";
-
-  return { original, detectedLanguage };
-}
-
-async function translateWithSarvam(text, sourceLanguageCode, targetLanguage) {
-  const targetCode = languageCodes[targetLanguage] || "en-IN";
-  const sourceCode = sourceLanguageCode || "auto";
-
-  if (sourceCode === targetCode) {
-    return {
-      translated: text,
-      detectedLanguage: sourceCode
-    };
-  }
-
-  const sarvamResponse = await fetch("https://api.sarvam.ai/translate", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "api-subscription-key": process.env.SARVAM_API_KEY
-    },
-    body: JSON.stringify({
-      input: text,
-      source_language_code: sourceCode,
-      target_language_code: targetCode,
-      model: "sarvam-translate:v1"
-    })
-  });
-
-  if (!sarvamResponse.ok) {
-    const errorText = await sarvamResponse.text();
-    throw new Error(`Sarvam translate failed with ${sarvamResponse.status}: ${errorText}`);
-  }
-
-  const result = await sarvamResponse.json();
-  return {
-    detectedLanguage: result?.source_language_code || sourceCode,
-    translated: result?.translated_text || text
-  };
 }
 
 async function serveStatic(request, response) {
@@ -246,12 +242,14 @@ async function serveStatic(request, response) {
 const server = createServer(async (request, response) => {
   try {
     if (request.method === "GET" && request.url === "/api/status") {
+      const apiKey = process.env.GOOGLE_API_KEY;
       sendJson(response, 200, {
         hasApiKey: Boolean(
-          process.env.SARVAM_API_KEY &&
-          process.env.SARVAM_API_KEY !== "your_sarvam_api_key_here" &&
-          process.env.SARVAM_API_KEY.trim() !== ""
-        )
+          apiKey &&
+          apiKey !== "your_google_api_key_here" &&
+          apiKey.trim() !== ""
+        ),
+        provider: "Google Cloud Speech & Translate API"
       });
       return;
     }

@@ -415,12 +415,12 @@ async function checkApiStatus() {
       const data = await response.json();
       if (data.hasApiKey) {
         apiBadge.className = "api-badge active";
-        badgeText.textContent = "Live (Sarvam AI)";
-        apiBadge.title = "Connected to Sarvam AI translation backend";
+        badgeText.textContent = "Live (Google Cloud)";
+        apiBadge.title = "Connected to Google Cloud Speech & Translate backend";
       } else {
         apiBadge.className = "api-badge demo";
         badgeText.textContent = "Demo Mode";
-        apiBadge.title = "Running with fallback mock captions. Define SARVAM_API_KEY in .env for real translation.";
+        apiBadge.title = "Running with fallback mock captions. Define GOOGLE_API_KEY in .env / Vercel for real translation.";
       }
     } else {
       throw new Error();
