@@ -507,10 +507,10 @@ select:focus {
 .primary-button,
 .launch-pip-btn {
   flex: 3;
-  height: 56px !important;
-  font-size: 1.05rem !important;
+  height: 64px !important;
+  font-size: 1.12rem !important;
   font-weight: 800 !important;
-  border-radius: 16px !important;
+  border-radius: 18px !important;
   padding: 0 28px !important;
   background: linear-gradient(135deg, var(--accent-cyan) 0%, #0284c7 100%) !important;
   border: none !important;
@@ -533,13 +533,13 @@ select:focus {
 
 .primary-button .play-icon,
 .launch-pip-btn .play-icon {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
 }
 
 /* PiP Floating Overlay Button */
 .pip-button {
-  height: 56px;
-  border-radius: 16px;
+  height: 64px;
+  border-radius: 18px;
   background: rgba(139, 92, 246, 0.14);
   border: 1px solid rgba(139, 92, 246, 0.45);
   color: #c4b5fd;
@@ -549,10 +549,10 @@ select:focus {
 /* Stop Button */
 .icon-button {
   flex: 1;
-  height: 56px !important;
-  font-size: 1.05rem !important;
+  height: 64px !important;
+  font-size: 1.12rem !important;
   font-weight: 800 !important;
-  border-radius: 16px !important;
+  border-radius: 18px !important;
   border: 1px solid var(--control-border) !important;
   background: var(--control-bg) !important;
   color: var(--accent-rose) !important;
@@ -840,22 +840,7 @@ button:disabled {
   }
 }
 
-/* Thick Master Launch Button */
-.launch-pip-btn {
-  height: 56px !important;
-  font-size: 1.05rem !important;
-  font-weight: 800 !important;
-  border-radius: 16px !important;
-  padding: 0 28px !important;
-  letter-spacing: 0.01em;
-  box-shadow: 0 6px 24px rgba(var(--accent-cyan-rgb), 0.3);
-  transition: var(--transition-smooth);
-}
 
-.launch-pip-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(var(--accent-cyan-rgb), 0.5);
-}
 
 @media (max-width: 520px) {
   .app-shell {
