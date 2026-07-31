@@ -451,12 +451,20 @@ async function startCapture() {
       });
     });
 
-    mediaRecorder.start(3500);
+    mediaRecorder.start(4000);
+
+    // Automatically launch Picture-in-Picture Floating Subtitles as soon as capture begins!
+    setTimeout(() => {
+      if (!pipWindow && !document.pictureInPictureElement) {
+        togglePictureInPicture().catch((err) => console.log("PiP auto launch note:", err));
+      }
+    }, 400);
     
     mediaStream.getVideoTracks()[0]?.addEventListener("ended", stopCapture);
   } catch (error) {
     console.error(error);
     stopCapture();
+    setStatus("Permission denied");
   }
 }
 
@@ -606,10 +614,15 @@ if (bannerDismissBtn) {
 }
 
 if (pipButton) {
-  pipButton.addEventListener("click", togglePictureInPicture);
+  pipButton.addEventListener("click", async () => {
+    if (!mediaStream) {
+      await startCapture();
+    } else {
+      togglePictureInPicture();
+    }
+  });
 }
 
-shareButton.addEventListener("click", startCapture);
 stopButton.addEventListener("click", stopCapture);
 clearButton.addEventListener("click", () => {
   captionCount = 0;
