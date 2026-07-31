@@ -175,6 +175,21 @@ h1 {
   gap: 12px;
 }
 
+/* PWA Install Button */
+.pwa-install-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #10b981;
+}
+
+.pwa-install-btn:hover {
+  background: rgba(16, 185, 129, 0.22);
+  border-color: #10b981;
+}
+
 /* API Badge */
 .api-badge {
   display: inline-flex;
@@ -359,6 +374,7 @@ video {
 .action-row {
   display: flex;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .select-label {
@@ -398,21 +414,9 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(var(--accent-primary-rgb), 0.15);
 }
 
-/* Support Notification */
-.support-note {
-  padding: 12px 16px;
-  border-radius: 10px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  line-height: 1.4;
-  background: rgba(244, 63, 94, 0.1);
-  border: 1px solid rgba(244, 63, 94, 0.2);
-  color: var(--accent-danger);
-  animation: fadeIn 0.4s ease;
-}
-
 /* Buttons */
 .primary-button,
+.pip-button,
 .ghost-button,
 .icon-button {
   display: inline-flex;
@@ -429,7 +433,8 @@ select:focus {
 }
 
 .primary-button {
-  flex: 1;
+  flex: 1.2;
+  min-width: 140px;
   background: var(--accent-primary);
   border: none;
   color: #080a0f;
@@ -445,8 +450,29 @@ select:focus {
   font-size: 0.75rem;
 }
 
+.pip-button {
+  flex: 1;
+  min-width: 160px;
+  background: rgba(13, 242, 201, 0.12);
+  border: 1px solid rgba(13, 242, 201, 0.35);
+  color: var(--accent-primary);
+}
+
+.pip-button:hover:not(:disabled) {
+  background: rgba(13, 242, 201, 0.22);
+  border-color: var(--accent-primary);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(var(--accent-primary-rgb), 0.2);
+}
+
+.pip-button.is-active {
+  background: var(--accent-primary);
+  color: #080a0f;
+  box-shadow: 0 0 16px rgba(var(--accent-primary-rgb), 0.4);
+}
+
 .icon-button {
-  min-width: 80px;
+  min-width: 70px;
   border: 1px solid var(--control-border);
   background: var(--control-bg);
   color: var(--accent-danger);
@@ -746,8 +772,16 @@ button:disabled {
     grid-template-columns: 1fr;
   }
   
+  .action-row {
+    flex-direction: column;
+  }
+  
+  .primary-button, .pip-button, .icon-button {
+    width: 100%;
+  }
+
   .preview-frame {
-    height: 280px;
+    height: 240px;
   }
   
   #audioMeter {

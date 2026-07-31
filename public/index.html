@@ -3,7 +3,9 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Translatuhh — Live Tab & Mic Translator</title>
+    <title>Translatuhh — Live Speech & Reel Subtitle Overlay</title>
+    <meta name="theme-color" content="#080a0f">
+    <link rel="manifest" href="/manifest.json">
     <!-- Google Fonts for premium typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,10 +22,16 @@
       <section class="watch-pane" aria-label="Shared video preview">
         <div class="topbar">
           <div>
-            <p class="eyebrow">Live Speech Translator</p>
+            <p class="eyebrow">Live Speech & Reel Translator</p>
             <h1>Translatuhh</h1>
           </div>
           <div class="topbar-actions">
+            <!-- PWA Install Button -->
+            <button class="ghost-button pwa-install-btn" id="installPwaBtn" type="button" style="display: none;" title="Add Translatuhh to Home Screen">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Install App
+            </button>
+
             <!-- API Status Badge -->
             <div class="api-badge" id="apiBadge" title="Checking API status...">
               <span class="badge-dot"></span>
@@ -63,8 +71,8 @@
             <label class="select-label" for="audioSource">
               Input Source
               <select id="audioSource">
-                <option value="tab">Tab Audio (Browser)</option>
-                <option value="mic">Microphone (Device)</option>
+                <option value="system">System Sound (Headphones Supported)</option>
+                <option value="mic">Microphone (Speakers & Voice)</option>
               </select>
             </label>
 
@@ -86,6 +94,10 @@
                 <option>Assamese</option>
                 <option>Nepali</option>
                 <option>Urdu</option>
+                <option>Spanish</option>
+                <option>French</option>
+                <option>German</option>
+                <option>Japanese</option>
               </select>
             </label>
           </div>
@@ -95,6 +107,12 @@
               <span class="play-icon" aria-hidden="true">▶</span>
               Start Capture
             </button>
+            
+            <button class="pip-button" id="pipButton" type="button" title="Pin subtitles floating over Instagram, YouTube or TikTok">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><rect x="13" y="11" width="7" height="7" rx="1"></rect></svg>
+              Floating Subtitles (PiP)
+            </button>
+
             <button class="icon-button" id="stopButton" type="button" aria-label="Stop capture" title="Stop capture" disabled>
               Stop
             </button>
@@ -132,11 +150,15 @@
         <div class="caption-list" id="captionList" data-size="medium">
           <article class="caption-card muted">
             <p class="original">No captions yet.</p>
-            <p class="translated">Select your audio source and click "Start Capture". Converted text and translations will appear here in real-time.</p>
+            <p class="translated">Select your audio source, click "Start Capture", and click "Floating Subtitles (PiP)" to view real-time captions pinned over reels and apps.</p>
           </article>
         </div>
       </aside>
     </main>
+
+    <!-- Hidden elements driving the Picture-in-Picture Floating Subtitle Window -->
+    <canvas id="pipCanvas" width="640" height="240" style="display: none;"></canvas>
+    <video id="pipVideo" autoplay muted playsinline style="display: none;"></video>
 
     <script src="/app.js" type="module"></script>
   </body>

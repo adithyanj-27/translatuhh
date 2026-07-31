@@ -21,6 +21,15 @@ const fontSizeDec = document.querySelector("#fontSizeDec");
 const fontSizeInc = document.querySelector("#fontSizeInc");
 const exportButton = document.querySelector("#exportButton");
 
+// Floating Overlay (PiP) Drivers
+const pipButton = document.querySelector("#pipButton");
+const pipCanvas = document.querySelector("#pipCanvas");
+const pipCanvasCtx = pipCanvas?.getContext("2d");
+const pipVideo = document.querySelector("#pipVideo");
+
+// PWA Install Button
+const installPwaBtn = document.querySelector("#installPwaBtn");
+
 let mediaStream;
 let mediaRecorder;
 let audioContext;
@@ -28,6 +37,9 @@ let analyser;
 let meterAnimation;
 let captionCount = 0;
 let sessionHistory = [];
+
+let pipWindow = null;
+let currentPiPText = { original: "", translated: "" };
 
 // For caption stream smoothing
 let lastCaptionTime = null;
@@ -40,20 +52,19 @@ const sizeSteps = ["small", "medium", "large", "xlarge"];
 
 function setSupportMessage() {
   if (!canShareScreen) {
-    // If they can't share screen, hide Tab option, set source to mic default
     audioSource.value = "mic";
-    const tabOption = audioSource.querySelector('option[value="tab"]');
-    if (tabOption) tabOption.disabled = true;
+    const systemOption = audioSource.querySelector('option[value="system"]');
+    if (systemOption) systemOption.disabled = true;
     
     supportNote.hidden = false;
     supportNote.textContent =
-      "Browser tab sharing is not supported on this device. Microphone mode is active.";
+      "System audio capture is restricted on this browser/OS. Microphone mode is active for nearby sound.";
   }
 
   if (isLikelyMobile && canShareScreen) {
     supportNote.hidden = false;
     supportNote.textContent =
-      "Tab sharing is supported, but mobile devices often block audio capture from other tabs. Switch to Microphone mode to capture nearby speech.";
+      "System audio capture active. Start recording to translate media playing through speakers or headphones!";
   }
 }
 
@@ -111,6 +122,150 @@ function drawMeter() {
   meterAnimation = requestAnimationFrame(drawMeter);
 }
 
+// Render Picture-in-Picture Floating Subtitle Frame
+function renderPiPFrame(originalText, translatedText) {
+  currentPiPText.original = originalText || "";
+  currentPiPText.translated = translatedText || "";
+
+  // 1. Update Document Picture-in-Picture Window if active
+  if (pipWindow && pipWindow.document) {
+    const origEl = pipWindow.document.querySelector("#pipOriginal");
+    const transEl = pipWindow.document.querySelector("#pipTranslated");
+    if (origEl) origEl.textContent = currentPiPText.original;
+    if (transEl) transEl.textContent = currentPiPText.translated;
+  }
+
+  // 2. Update Canvas Video Stream PiP Fallback
+  if (pipCanvasCtx && pipCanvas) {
+    pipCanvasCtx.fillStyle = "#080a0f";
+    pipCanvasCtx.fillRect(0, 0, pipCanvas.width, pipCanvas.height);
+
+    pipCanvasCtx.strokeStyle = "#0df2c9";
+    pipCanvasCtx.lineWidth = 4;
+    pipCanvasCtx.strokeRect(0, 0, pipCanvas.width, pipCanvas.height);
+
+    pipCanvasCtx.fillStyle = "#94a3b8";
+    pipCanvasCtx.font = "italic 16px 'Plus Jakarta Sans', sans-serif";
+    pipCanvasCtx.fillText((currentPiPText.original || "").slice(0, 50), 20, 45);
+
+    pipCanvasCtx.fillStyle = "#0df2c9";
+    pipCanvasCtx.font = "bold 22px 'Space Grotesk', sans-serif";
+
+    const words = (currentPiPText.translated || "Listening for speech...").split(" ");
+    let line = "";
+    let y = 100;
+    for (let i = 0; i < words.length; i++) {
+      const testLine = line + words[i] + " ";
+      if (pipCanvasCtx.measureText(testLine).width > pipCanvas.width - 40 && i > 0) {
+        pipCanvasCtx.fillText(line, 20, y);
+        line = words[i] + " ";
+        y += 32;
+      } else {
+        line = testLine;
+      }
+    }
+    pipCanvasCtx.fillText(line, 20, y);
+  }
+}
+
+async function togglePictureInPicture() {
+  try {
+    // 1. Modern Document Picture-in-Picture API
+    if ("documentPictureInPicture" in window) {
+      if (pipWindow) {
+        pipWindow.close();
+        pipWindow = null;
+        if (pipButton) pipButton.classList.remove("is-active");
+        return;
+      }
+
+      pipWindow = await window.documentPictureInPicture.requestWindow({
+        width: 480,
+        height: 160
+      });
+
+      const style = pipWindow.document.createElement("style");
+      style.textContent = `
+        body {
+          margin: 0;
+          padding: 14px;
+          background: #080a0f;
+          color: #f8fafc;
+          font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          height: 100vh;
+          box-sizing: border-box;
+          border: 2px solid #0df2c9;
+          border-radius: 8px;
+          overflow: hidden;
+        }
+        .pip-orig {
+          font-size: 0.8rem;
+          color: #94a3b8;
+          font-style: italic;
+          margin-bottom: 6px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .pip-trans {
+          font-size: 1.2rem;
+          font-weight: 800;
+          color: #0df2c9;
+          line-height: 1.35;
+        }
+      `;
+      pipWindow.document.head.appendChild(style);
+
+      const origDiv = pipWindow.document.createElement("div");
+      origDiv.id = "pipOriginal";
+      origDiv.className = "pip-orig";
+      origDiv.textContent = currentPiPText.original || "Subtitles active...";
+
+      const transDiv = pipWindow.document.createElement("div");
+      transDiv.id = "pipTranslated";
+      transDiv.className = "pip-trans";
+      transDiv.textContent = currentPiPText.translated || "Waiting for speech...";
+
+      pipWindow.document.body.appendChild(origDiv);
+      pipWindow.document.body.appendChild(transDiv);
+
+      if (pipButton) pipButton.classList.add("is-active");
+
+      pipWindow.addEventListener("pagehide", () => {
+        pipWindow = null;
+        if (pipButton) pipButton.classList.remove("is-active");
+      });
+      return;
+    }
+
+    // 2. Fallback Canvas Video Stream Picture-in-Picture
+    if (document.pictureInPictureElement) {
+      await document.exitPictureInPicture();
+      if (pipButton) pipButton.classList.remove("is-active");
+      return;
+    }
+
+    renderPiPFrame(currentPiPText.original, currentPiPText.translated);
+    if (pipCanvas && pipVideo) {
+      const stream = pipCanvas.captureStream(15);
+      pipVideo.srcObject = stream;
+      await pipVideo.play();
+      await pipVideo.requestPictureInPicture();
+      if (pipButton) pipButton.classList.add("is-active");
+
+      pipVideo.addEventListener("leavepictureinpicture", () => {
+        if (pipButton) pipButton.classList.remove("is-active");
+      });
+    }
+  } catch (err) {
+    console.error("Picture-in-Picture error:", err);
+    alert("Floating subtitle overlay is not supported in this browser context.");
+  }
+}
+
 function addCaption(caption) {
   if (captionCount === 0) {
     captionList.innerHTML = "";
@@ -130,7 +285,6 @@ function addCaption(caption) {
 
   const pauseScroll = document.querySelector("#pauseScroll").checked;
 
-  // Stream Smoothing: merge if same language, within 10 seconds, and non-empty
   const isSameLanguage = lastDetectedLanguage === caption.detectedLanguage;
   const isRecent = lastCaptionTime && (timestamp - lastCaptionTime < 10000);
 
@@ -141,15 +295,15 @@ function addCaption(caption) {
     origTextNode.textContent += " " + caption.original;
     transTextNode.textContent += " " + caption.translated;
 
-    // Update session history
     const lastHistIndex = sessionHistory.length - 2;
     if (sessionHistory[lastHistIndex]) {
       sessionHistory[lastHistIndex].original += " " + caption.original;
       sessionHistory[lastHistIndex].translated += " " + caption.translated;
-      sessionHistory.pop(); // Remove the single chunk entry
+      sessionHistory.pop();
     }
 
     lastCaptionTime = timestamp;
+    renderPiPFrame(origTextNode.textContent, transTextNode.textContent);
   } else {
     captionCount += 1;
     const card = document.createElement("article");
@@ -186,6 +340,8 @@ function addCaption(caption) {
     lastCardElement = card;
     lastDetectedLanguage = caption.detectedLanguage;
     lastCaptionTime = timestamp;
+
+    renderPiPFrame(caption.original, caption.translated);
   }
 
   if (!pauseScroll) {
@@ -231,8 +387,6 @@ function stopCapture() {
   audioContext = undefined;
 
   previewVideo.srcObject = null;
-  
-  // Set placeholder view
   emptyPreviewText.textContent = "Start capture to preview feed here.";
   emptyPreview.classList.remove("is-hidden");
   
@@ -268,8 +422,8 @@ async function startCapture() {
     shareButton.disabled = true;
     const source = audioSource.value;
 
-    if (source === "tab") {
-      setStatus("Choose a tab");
+    if (source === "system") {
+      setStatus("Select system sound");
       mediaStream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
         audio: {
@@ -290,7 +444,7 @@ async function startCapture() {
         }
       });
       previewVideo.srcObject = null;
-      emptyPreviewText.textContent = "Microphone input active.";
+      emptyPreviewText.textContent = "Microphone input active (Speakers & Voice).";
       emptyPreview.classList.remove("is-hidden");
     }
 
@@ -299,7 +453,7 @@ async function startCapture() {
       stopCapture();
       supportNote.hidden = false;
       supportNote.textContent =
-        "No audio track was captured. Check device/tab permissions and try again.";
+        "No audio track was captured. Enable system/tab audio sharing and try again.";
       return;
     }
 
@@ -330,7 +484,6 @@ async function startCapture() {
 
     mediaRecorder.start(3500);
     
-    // Automatically stop when the shared screen track ends
     mediaStream.getVideoTracks()[0]?.addEventListener("ended", stopCapture);
   } catch (error) {
     console.error(error);
@@ -432,6 +585,40 @@ async function checkApiStatus() {
   }
 }
 
+// Service Worker & PWA Support
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch((err) => {
+      console.log("Service Worker registration failed:", err);
+    });
+  });
+}
+
+let deferredPrompt = null;
+window.addEventListener("beforeinstallprompt", (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (installPwaBtn) {
+    installPwaBtn.style.display = "inline-flex";
+  }
+});
+
+if (installPwaBtn) {
+  installPwaBtn.addEventListener("click", async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === "accepted") {
+      installPwaBtn.style.display = "none";
+    }
+    deferredPrompt = null;
+  });
+}
+
+if (pipButton) {
+  pipButton.addEventListener("click", togglePictureInPicture);
+}
+
 shareButton.addEventListener("click", startCapture);
 stopButton.addEventListener("click", stopCapture);
 clearButton.addEventListener("click", () => {
@@ -441,12 +628,13 @@ clearButton.addEventListener("click", () => {
   captionList.innerHTML = `
     <article class="caption-card muted">
       <p class="original">No captions yet.</p>
-      <p class="translated">Select your audio source and click "Start Capture". Converted text and translations will appear here in real-time.</p>
+      <p class="translated">Select your audio source, click "Start Capture", and click "Floating Subtitles (PiP)" to view real-time captions pinned over reels and apps.</p>
     </article>
   `;
   lastCaptionTime = null;
   lastDetectedLanguage = null;
   lastCardElement = null;
+  renderPiPFrame("", "");
 });
 
 // Initialization
