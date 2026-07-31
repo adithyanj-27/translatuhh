@@ -2,8 +2,6 @@ const shareButton = document.querySelector("#shareButton");
 const stopButton = document.querySelector("#stopButton");
 const clearButton = document.querySelector("#clearButton");
 const previewVideo = document.querySelector("#previewVideo");
-const emptyPreview = document.querySelector("#emptyPreview");
-const emptyPreviewText = document.querySelector("#emptyPreviewText");
 const supportNote = document.querySelector("#supportNote");
 const statusPill = document.querySelector("#statusPill");
 const targetLanguage = document.querySelector("#targetLanguage");
@@ -375,9 +373,7 @@ function stopCapture() {
   audioContext?.close();
   audioContext = undefined;
 
-  previewVideo.srcObject = null;
-  emptyPreviewText.textContent = "Start capture to preview feed here.";
-  emptyPreview.classList.remove("is-hidden");
+  if (previewVideo) previewVideo.srcObject = null;
   
   shareButton.disabled = false;
   stopButton.disabled = true;
@@ -419,8 +415,7 @@ async function startCapture() {
         sampleRate: 48000
       }
     });
-    previewVideo.srcObject = mediaStream;
-    emptyPreview.classList.add("is-hidden");
+    if (previewVideo) previewVideo.srcObject = mediaStream;
 
     const audioTracks = mediaStream.getAudioTracks();
     if (audioTracks.length === 0) {

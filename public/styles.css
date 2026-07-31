@@ -373,68 +373,47 @@ h1 {
   height: 18px;
 }
 
-/* Video Preview OLED Frame */
-.preview-frame {
+/* Visualizer Card (Replaced large video preview box) */
+.visualizer-card {
   position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px;
   border-radius: 20px;
+  background: var(--panel-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border: 1px solid var(--panel-border);
-  background: #000;
   box-shadow: var(--panel-shadow);
   overflow: hidden;
 }
 
-video {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.empty-preview {
-  position: absolute;
-  inset: 0;
+.visualizer-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
-  background: radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.95) 0%, rgba(4, 7, 14, 0.99) 100%);
-  color: var(--text-secondary);
-  text-align: center;
-  padding: 24px;
+  margin-bottom: 12px;
 }
 
-.empty-preview-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 16px;
-}
-
-.preview-placeholder-icon {
-  width: 52px;
-  height: 52px;
+.visualizer-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
   color: var(--accent-cyan);
-  filter: drop-shadow(0 0 12px rgba(var(--accent-cyan-rgb), 0.4));
-  animation: floatAnim 4s ease-in-out infinite;
-}
-
-@keyframes floatAnim {
-  0% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
-  100% { transform: translateY(0px); }
 }
 
 #audioMeter {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 40px);
-  height: 54px;
+  position: relative;
+  bottom: auto;
+  left: auto;
+  transform: none;
+  width: 100%;
+  height: 120px;
   border-radius: 14px;
-  background: rgba(5, 8, 15, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  background: rgba(5, 8, 15, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  pointer-events: none;
 }
 
 /* Floating Dock Controls */

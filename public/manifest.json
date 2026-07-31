@@ -1,12 +1,12 @@
 {
-  "name": "Translatuhh — Live Speech & Reel Translator",
+  "name": "Translatuhh",
   "short_name": "Translatuhh",
-  "description": "Real-time speech translation with floating subtitle overlay and headphone audio support.",
+  "description": "Real-time speech translation with floating subtitle overlay.",
   "start_url": "/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#080a0f",
-  "theme_color": "#080a0f",
+  "background_color": "#05070c",
+  "theme_color": "#05070c",
   "icons": [
     {
       "src": "/icon-192.png",
