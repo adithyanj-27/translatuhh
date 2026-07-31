@@ -7,7 +7,6 @@ const emptyPreviewText = document.querySelector("#emptyPreviewText");
 const supportNote = document.querySelector("#supportNote");
 const statusPill = document.querySelector("#statusPill");
 const targetLanguage = document.querySelector("#targetLanguage");
-const audioSource = document.querySelector("#audioSource");
 const detectedLanguage = document.querySelector("#detectedLanguage");
 const captionList = document.querySelector("#captionList");
 const audioMeter = document.querySelector("#audioMeter");
@@ -52,19 +51,9 @@ const sizeSteps = ["small", "medium", "large", "xlarge"];
 
 function setSupportMessage() {
   if (!canShareScreen) {
-    audioSource.value = "mic";
-    const systemOption = audioSource.querySelector('option[value="system"]');
-    if (systemOption) systemOption.disabled = true;
-    
     supportNote.hidden = false;
     supportNote.textContent =
-      "System audio capture is restricted on this browser/OS. Microphone mode is active for nearby sound.";
-  }
-
-  if (isLikelyMobile && canShareScreen) {
-    supportNote.hidden = false;
-    supportNote.textContent =
-      "System audio capture active. Start recording to translate media playing through speakers or headphones!";
+      "System audio capture is restricted on this browser context.";
   }
 }
 
@@ -420,33 +409,18 @@ function getSupportedMimeType() {
 async function startCapture() {
   try {
     shareButton.disabled = true;
-    const source = audioSource.value;
+    setStatus("Select system sound");
 
-    if (source === "system") {
-      setStatus("Select system sound");
-      mediaStream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 48000
-        }
-      });
-      previewVideo.srcObject = mediaStream;
-      emptyPreview.classList.add("is-hidden");
-    } else {
-      setStatus("Accessing mic");
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 48000
-        }
-      });
-      previewVideo.srcObject = null;
-      emptyPreviewText.textContent = "Microphone input active (Speakers & Voice).";
-      emptyPreview.classList.remove("is-hidden");
-    }
+    mediaStream = await navigator.mediaDevices.getDisplayMedia({
+      video: true,
+      audio: {
+        echoCancellation: true,
+        noiseSuppression: true,
+        sampleRate: 48000
+      }
+    });
+    previewVideo.srcObject = mediaStream;
+    emptyPreview.classList.add("is-hidden");
 
     const audioTracks = mediaStream.getAudioTracks();
     if (audioTracks.length === 0) {
