@@ -54,30 +54,6 @@
           </div>
         </div>
 
-        <!-- Floating PWA Installation Banner -->
-        <div class="pwa-install-banner" id="pwaBanner" style="display: none;">
-          <div class="banner-content">
-            <img src="/logo.png" alt="App Icon" class="banner-icon">
-            <div>
-              <strong>Install Translatuhh App</strong>
-              <p>Add to your Home Screen for full-screen mode & floating subtitles!</p>
-            </div>
-          </div>
-          <div class="banner-actions">
-            <button class="primary-button install-now-btn" id="bannerInstallBtn">Install Now</button>
-            <button class="ghost-button dismiss-btn" id="bannerDismissBtn">Dismiss</button>
-          </div>
-        </div>
-
-        <!-- Clean Spectrum Visualizer Console (Replaced large video preview) -->
-        <div class="visualizer-card">
-          <div class="visualizer-header">
-            <span class="visualizer-label">Audio Spectrum Analyzer</span>
-          </div>
-          <canvas id="audioMeter" width="720" height="120" aria-label="Audio level visualization"></canvas>
-          <video id="previewVideo" autoplay muted playsinline style="display: none;"></video>
-        </div>
-
         <div class="support-note" id="supportNote" hidden></div>
 
         <div class="controls" aria-label="Capture controls">
@@ -157,7 +133,9 @@
       </aside>
     </main>
 
-    <!-- Hidden elements driving the Picture-in-Picture Floating Subtitle Window -->
+    <!-- Hidden drivers handling media stream and floating window -->
+    <canvas id="audioMeter" width="100" height="100" style="display: none;"></canvas>
+    <video id="previewVideo" autoplay muted playsinline style="display: none;"></video>
     <canvas id="pipCanvas" width="640" height="240" style="display: none;"></canvas>
     <video id="pipVideo" autoplay muted playsinline style="display: none;"></video>
 
