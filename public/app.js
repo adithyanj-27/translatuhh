@@ -405,16 +405,33 @@ function getSupportedMimeType() {
 async function startCapture() {
   try {
     pipButton.disabled = true;
-    setStatus("Select system sound");
+    setStatus("Accessing audio");
 
-    mediaStream = await navigator.mediaDevices.getDisplayMedia({
-      video: true,
-      audio: {
-        echoCancellation: true,
-        noiseSuppression: true,
-        sampleRate: 48000
-      }
-    });
+    let stream;
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    if (navigator.mediaDevices?.getDisplayMedia && !isMobileDevice) {
+      setStatus("Select system sound");
+      stream = await navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 48000
+        }
+      });
+    } else {
+      setStatus("Accessing microphone");
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          sampleRate: 48000
+        }
+      });
+    }
+
+    mediaStream = stream;
     if (previewVideo) previewVideo.srcObject = mediaStream;
 
     const audioTracks = mediaStream.getAudioTracks();
@@ -422,7 +439,7 @@ async function startCapture() {
       stopCapture();
       supportNote.hidden = false;
       supportNote.textContent =
-        "No audio track was captured. Enable system/tab audio sharing and try again.";
+        "No audio track was captured. Please grant audio permission and try again.";
       return;
     }
 

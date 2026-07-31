@@ -828,42 +828,89 @@ button:disabled {
   }
 }
 
+/* Thick Master Launch Button */
+.launch-pip-btn {
+  height: 56px !important;
+  font-size: 1.05rem !important;
+  font-weight: 800 !important;
+  border-radius: 16px !important;
+  padding: 0 28px !important;
+  letter-spacing: 0.01em;
+  box-shadow: 0 6px 24px rgba(var(--accent-cyan-rgb), 0.3);
+  transition: var(--transition-smooth);
+}
+
+.launch-pip-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(var(--accent-cyan-rgb), 0.5);
+}
+
 @media (max-width: 520px) {
   .app-shell {
     padding: 12px;
   }
 
   .topbar {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 10px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
   }
   
   .topbar-actions {
-    width: 100%;
-    justify-content: flex-end;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Compact topbar elements on mobile to prevent congestion */
+  .api-badge .badge-text {
+    display: none;
+  }
+
+  .api-badge {
+    padding: 0;
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .status-pill {
+    font-size: 0.68rem;
+    padding: 0 10px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .pwa-install-btn {
+    font-size: 0.68rem;
+    padding: 0 10px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .theme-toggle {
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   
   .action-row {
     flex-direction: column;
+    gap: 12px;
   }
   
   .primary-button, .pip-button, .icon-button {
     width: 100%;
   }
 
-  .preview-frame {
-    height: 250px;
-  }
-  
-  #audioMeter {
-    bottom: 12px;
-    left: 12px;
-    transform: none;
-    width: calc(100% - 24px);
-    height: 42px;
-  }
-  
   .pane-header {
     flex-direction: column;
     align-items: flex-start;
