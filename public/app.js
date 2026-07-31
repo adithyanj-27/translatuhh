@@ -569,23 +569,44 @@ if ("serviceWorker" in navigator) {
 }
 
 let deferredPrompt = null;
+const pwaBanner = document.querySelector("#pwaBanner");
+const bannerInstallBtn = document.querySelector("#bannerInstallBtn");
+const bannerDismissBtn = document.querySelector("#bannerDismissBtn");
+
 window.addEventListener("beforeinstallprompt", (e) => {
   e.preventDefault();
   deferredPrompt = e;
   if (installPwaBtn) {
     installPwaBtn.style.display = "inline-flex";
   }
+  if (pwaBanner && !sessionStorage.getItem("pwa_banner_dismissed")) {
+    pwaBanner.style.display = "flex";
+  }
 });
 
+async function triggerPwaInstall() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome === "accepted") {
+    if (installPwaBtn) installPwaBtn.style.display = "none";
+    if (pwaBanner) pwaBanner.style.display = "none";
+  }
+  deferredPrompt = null;
+}
+
 if (installPwaBtn) {
-  installPwaBtn.addEventListener("click", async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === "accepted") {
-      installPwaBtn.style.display = "none";
-    }
-    deferredPrompt = null;
+  installPwaBtn.addEventListener("click", triggerPwaInstall);
+}
+
+if (bannerInstallBtn) {
+  bannerInstallBtn.addEventListener("click", triggerPwaInstall);
+}
+
+if (bannerDismissBtn) {
+  bannerDismissBtn.addEventListener("click", () => {
+    if (pwaBanner) pwaBanner.style.display = "none";
+    sessionStorage.setItem("pwa_banner_dismissed", "true");
   });
 }
 
