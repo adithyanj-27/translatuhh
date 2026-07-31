@@ -1,4 +1,4 @@
-const shareButton = document.querySelector("#shareButton");
+
 const stopButton = document.querySelector("#stopButton");
 const clearButton = document.querySelector("#clearButton");
 const previewVideo = document.querySelector("#previewVideo");
@@ -375,7 +375,7 @@ function stopCapture() {
 
   if (previewVideo) previewVideo.srcObject = null;
   
-  shareButton.disabled = false;
+  pipButton.disabled = false;
   stopButton.disabled = true;
   setStatus("Idle");
   resetMeter();
@@ -404,7 +404,7 @@ function getSupportedMimeType() {
 
 async function startCapture() {
   try {
-    shareButton.disabled = true;
+    pipButton.disabled = true;
     setStatus("Select system sound");
 
     mediaStream = await navigator.mediaDevices.getDisplayMedia({
