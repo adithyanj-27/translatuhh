@@ -123,7 +123,7 @@ async function transcribeWithGoogle(audioBuffer, apiKey, sourceLanguage, encodin
 
 async function translateFree(text, targetLanguage) {
   try {
-    const targetCode = googleTranslateLanguageCodes[targetLanguage] || "en";
+    const targetCode = googleLanguageCodes[targetLanguage] || "en";
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetCode}&dt=t&q=${encodeURIComponent(text)}`;
     const response = await fetch(url);
     if (response.ok) {
@@ -147,7 +147,7 @@ async function translateFree(text, targetLanguage) {
 
 async function translateWithGoogle(text, targetLanguage, apiKey, contextText = "") {
   try {
-    const targetCode = googleTranslateLanguageCodes[targetLanguage] || "en";
+    const targetCode = googleLanguageCodes[targetLanguage] || "en";
     const url = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`;
 
     const response = await fetch(url, {

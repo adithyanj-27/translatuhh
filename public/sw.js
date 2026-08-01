@@ -1,4 +1,4 @@
-const CACHE_NAME = "translatuhh-v7";
+const CACHE_NAME = "translatuhh-v8";
 const ASSETS = [
   "/",
   "/index.html",
