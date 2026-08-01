@@ -916,12 +916,19 @@ button:disabled {
   }
 
   .api-badge,
-  .status-pill,
-  .pwa-install-btn {
+  .status-pill {
     font-size: 0.72rem !important;
     padding: 0 10px !important;
     height: 34px !important;
     display: inline-flex !important;
+    align-items: center !important;
+    border-radius: 999px !important;
+  }
+
+  .pwa-install-btn {
+    font-size: 0.72rem !important;
+    padding: 0 10px !important;
+    height: 34px !important;
     align-items: center !important;
     border-radius: 999px !important;
   }
