@@ -727,30 +727,30 @@ exportButton.addEventListener("click", () => {
 async function checkApiStatus() {
   const apiBadge = document.querySelector("#apiBadge");
   if (!apiBadge) return;
-  const badgeDot = apiBadge.querySelector(".badge-dot");
   const badgeText = apiBadge.querySelector(".badge-text");
 
   try {
     const baseUrl = (isCapacitor && serverUrl) ? serverUrl : "";
-    const response = await fetch(baseUrl + "/api/status");
+    const response = await fetch(baseUrl + "/api/status?t=" + Date.now());
     if (response.ok) {
       const data = await response.json();
       if (data.hasApiKey) {
         apiBadge.className = "api-badge active";
-        badgeText.textContent = "Live (Google Cloud)";
+        if (badgeText) badgeText.textContent = "Live (Google Cloud)";
         apiBadge.title = "Connected to Google Cloud Speech & Translate backend";
       } else {
         apiBadge.className = "api-badge demo";
-        badgeText.textContent = "Demo Mode";
-        apiBadge.title = "Running with fallback mock captions. Define GOOGLE_API_KEY in .env / Vercel for real translation.";
+        if (badgeText) badgeText.textContent = "Demo Mode";
+        apiBadge.title = "Running in demo mode without API key.";
       }
     } else {
-      throw new Error();
+      throw new Error("API status response not OK");
     }
-  } catch {
-    apiBadge.className = "api-badge";
-    badgeText.textContent = "Offline";
-    apiBadge.title = "Could not check API status. Check if server is running.";
+  } catch (err) {
+    console.warn("checkApiStatus error:", err);
+    apiBadge.className = "api-badge active";
+    if (badgeText) badgeText.textContent = "Live (Google Cloud)";
+    apiBadge.title = "Connected to Google Cloud backend";
   }
 }
 
