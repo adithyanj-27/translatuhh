@@ -683,12 +683,12 @@ async function startCapture() {
 
       mediaRecorder.start();
 
-      // Stop after 3.5 seconds → triggers onstop → sends complete file → chains next
+      // Stop after 2.5 seconds → triggers onstop → sends complete file → chains next
       setTimeout(() => {
         if (mediaRecorder && mediaRecorder.state === "recording") {
           mediaRecorder.stop();
         }
-      }, 3500);
+      }, 2500);
     }
 
     // Kick off the recording chain

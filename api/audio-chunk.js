@@ -81,10 +81,12 @@ async function readRequestBody(req) {
 async function transcribeWithGoogle(audioBuffer, apiKey, sourceLanguage, encoding = "WEBM_OPUS", sampleRate = 48000) {
   const base64Audio = audioBuffer.toString("base64");
   const speechCode = googleSpeechLanguageCodes[sourceLanguage] || "en-US";
-  
+  const alternativeCodes = ["en-US", "hi-IN", "bn-IN", "ta-IN", "te-IN", "es-ES"].filter(code => code !== speechCode);
+
   const config = {
     encoding: encoding,
-    languageCode: speechCode
+    languageCode: speechCode,
+    alternativeLanguageCodes: alternativeCodes
   };
 
   // Google STT API v1 rule: sampleRateHertz MUST NOT be set when encoding is WEBM_OPUS or OGG_OPUS
