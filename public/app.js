@@ -702,6 +702,7 @@ async function startCapture() {
     }, 400);
     
     mediaStream.getVideoTracks()[0]?.addEventListener("ended", stopCapture);
+    audioTracks[0]?.addEventListener("ended", stopCapture);
   } catch (error) {
     console.error(error);
     stopCapture();
