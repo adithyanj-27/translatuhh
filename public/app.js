@@ -24,11 +24,11 @@ const sourceLanguage = document.querySelector("#sourceLanguage");
 const detectedLanguage = document.querySelector("#detectedLanguage");
 const captionList = document.querySelector("#captionList");
 const audioMeter = document.querySelector("#audioMeter");
-const meterContext = audioMeter.getContext("2d");
+const meterContext = audioMeter ? audioMeter.getContext("2d") : null;
 
 const themeToggle = document.querySelector("#themeToggle");
-const sunIcon = themeToggle.querySelector(".sun-icon");
-const moonIcon = themeToggle.querySelector(".moon-icon");
+const sunIcon = themeToggle ? themeToggle.querySelector(".sun-icon") : null;
+const moonIcon = themeToggle ? themeToggle.querySelector(".moon-icon") : null;
 
 const fontSizeDec = document.querySelector("#fontSizeDec");
 const fontSizeInc = document.querySelector("#fontSizeInc");
@@ -89,7 +89,9 @@ function setStatus(label, isLive = false) {
 }
 
 function resetMeter() {
-  meterContext.clearRect(0, 0, audioMeter.width, audioMeter.height);
+  if (meterContext && audioMeter) {
+    meterContext.clearRect(0, 0, audioMeter.width, audioMeter.height);
+  }
 }
 
 function drawMeter() {
@@ -705,6 +707,7 @@ async function startCapture() {
 
 // Theme management
 function updateThemeIcons(theme) {
+  if (!sunIcon || !moonIcon) return;
   if (theme === "light") {
     sunIcon.style.display = "block";
     moonIcon.style.display = "none";
@@ -746,50 +749,56 @@ function setFontSize(newSize) {
 const savedSize = localStorage.getItem("caption_font_size") || "medium";
 setFontSize(savedSize);
 
-fontSizeDec.addEventListener("click", () => {
-  const currentSize = captionList.getAttribute("data-size") || "medium";
-  const currentIndex = sizeSteps.indexOf(currentSize);
-  if (currentIndex > 0) {
-    setFontSize(sizeSteps[currentIndex - 1]);
-  }
-});
+if (fontSizeDec && captionList) {
+  fontSizeDec.addEventListener("click", () => {
+    const currentSize = captionList.getAttribute("data-size") || "medium";
+    const currentIndex = sizeSteps.indexOf(currentSize);
+    if (currentIndex > 0) {
+      setFontSize(sizeSteps[currentIndex - 1]);
+    }
+  });
+}
 
-fontSizeInc.addEventListener("click", () => {
-  const currentSize = captionList.getAttribute("data-size") || "medium";
-  const currentIndex = sizeSteps.indexOf(currentSize);
-  if (currentIndex < sizeSteps.length - 1) {
-    setFontSize(sizeSteps[currentIndex + 1]);
-  }
-});
+if (fontSizeInc && captionList) {
+  fontSizeInc.addEventListener("click", () => {
+    const currentSize = captionList.getAttribute("data-size") || "medium";
+    const currentIndex = sizeSteps.indexOf(currentSize);
+    if (currentIndex < sizeSteps.length - 1) {
+      setFontSize(sizeSteps[currentIndex + 1]);
+    }
+  });
+}
 
 // Transcript export
-exportButton.addEventListener("click", () => {
-  if (sessionHistory.length === 0) {
-    alert("No captions captured to export yet.");
-    return;
-  }
+if (exportButton) {
+  exportButton.addEventListener("click", () => {
+    if (sessionHistory.length === 0) {
+      alert("No captions captured to export yet.");
+      return;
+    }
 
-  let text = "Translatuhh Translation Transcript\n";
-  text += `Exported on: ${new Date().toLocaleString()}\n`;
-  text += "=========================================\n\n";
+    let text = "Translatuhh Translation Transcript\n";
+    text += `Exported on: ${new Date().toLocaleString()}\n`;
+    text += "=========================================\n\n";
 
-  sessionHistory.forEach((item) => {
-    text += `[${item.time}] (${item.lang})\n`;
-    text += `Original:   ${item.original}\n`;
-    text += `Translated: ${item.translated}\n`;
-    text += "-----------------------------------------\n";
+    sessionHistory.forEach((item) => {
+      text += `[${item.time}] (${item.lang})\n`;
+      text += `Original:   ${item.original}\n`;
+      text += `Translated: ${item.translated}\n`;
+      text += "-----------------------------------------\n";
+    });
+
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `translatuhh-transcript-${Date.now()}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   });
-
-  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = `translatuhh-transcript-${Date.now()}.txt`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-});
+}
 
 // Check backend API Key status
 async function checkApiStatus() {
@@ -899,22 +908,26 @@ if (pipButton) {
   });
 }
 
-stopButton.addEventListener("click", stopCapture);
-clearButton.addEventListener("click", () => {
-  captionCount = 0;
-  sessionHistory = [];
-  if (detectedLanguage) detectedLanguage.textContent = "Waiting";
-  captionList.innerHTML = `
-    <article class="caption-card muted">
-      <p class="original">No captions yet.</p>
-      <p class="translated">Select your audio source, click "Start Capture", and click "Floating Subtitles (PiP)" to view real-time captions pinned over reels and apps.</p>
-    </article>
-  `;
-  lastCaptionTime = null;
-  lastDetectedLanguage = null;
-  lastCardElement = null;
-  renderPiPFrame("", "");
-});
+if (stopButton) {
+  stopButton.addEventListener("click", stopCapture);
+}
+if (clearButton && captionList) {
+  clearButton.addEventListener("click", () => {
+    captionCount = 0;
+    sessionHistory = [];
+    if (detectedLanguage) detectedLanguage.textContent = "Waiting";
+    captionList.innerHTML = `
+      <article class="caption-card muted">
+        <p class="original">No captions yet.</p>
+        <p class="translated">Select your audio source, click "Start Capture", and click "Floating Subtitles (PiP)" to view real-time captions pinned over reels and apps.</p>
+      </article>
+    `;
+    lastCaptionTime = null;
+    lastDetectedLanguage = null;
+    lastCardElement = null;
+    renderPiPFrame("", "");
+  });
+}
 
 // Initialization
 updateThemeIcons(document.documentElement.getAttribute("data-theme") || "dark");
