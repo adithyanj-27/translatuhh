@@ -622,77 +622,52 @@ async function startCapture() {
     setStatus("Listening", true);
     isCapturing = true;
 
-    // AudioContext for audio meter visualization only
+    // AudioContext for audio meter visualization & continuous 16kHz WAV encoding
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     audioContext = new AudioContextClass();
     const sourceNode = audioContext.createMediaStreamSource(new MediaStream(audioTracks));
+    
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 512;
     sourceNode.connect(analyser);
     drawMeter();
 
-    // Stop-and-restart MediaRecorder approach:
-    // Each stop() produces a COMPLETE WebM file with full headers.
-    // Then we immediately start() a new recording for the next chunk.
-    // This eliminates the header-less chunk bug AND the ScriptProcessor GC bug.
-    const mimeType = getSupportedMimeType();
+    // Continuous 16kHz Mono PCM WAV Audio Capture Processor
+    const sampleRate = audioContext.sampleRate || 48000;
+    const downsampleRatio = Math.max(1, Math.round(sampleRate / 16000));
+    
+    let pcmSamples = [];
+    const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
-    function startRecordingChunk() {
-      if (!isCapturing || !mediaStream || !mediaStream.active) return;
-      const tracks = mediaStream.getAudioTracks();
-      if (tracks.length === 0 || tracks[0].readyState !== "live") return;
+    processor.onaudioprocess = (e) => {
+      if (!isCapturing) return;
+      const input = e.inputBuffer.getChannelData(0);
+      for (let i = 0; i < input.length; i += downsampleRatio) {
+        pcmSamples.push(input[i]);
+      }
+    };
 
-      try {
-        // Create MediaRecorder from AUDIO TRACKS ONLY (not full display mediaStream which has video)
-        const audioOnlyStream = new MediaStream(tracks);
-        mediaRecorder = new MediaRecorder(audioOnlyStream, {
-          mimeType: mimeType || undefined
-        });
-      } catch (e) {
-        console.error("MediaRecorder creation failed:", e);
+    sourceNode.connect(processor);
+    processor.connect(audioContext.destination);
+
+    // Send a 16kHz LINEAR16 WAV chunk every 2.0 seconds continuously
+    const wavInterval = setInterval(() => {
+      if (!isCapturing) {
+        clearInterval(wavInterval);
         return;
       }
 
-      const chunks = [];
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          chunks.push(e.data);
+      if (pcmSamples.length > 0) {
+        const samplesToEncode = pcmSamples;
+        pcmSamples = [];
+        const wavBlob = encodeWAV(samplesToEncode, 16000);
+        if (wavBlob.size > 44) {
+          sendChunk(wavBlob, "LINEAR16", 16000).catch((err) => {
+            console.error("WAV chunk send error:", err);
+          });
         }
-      };
-
-      mediaRecorder.onstop = () => {
-        if (chunks.length > 0) {
-          const blob = new Blob(chunks, { type: mimeType || "audio/webm" });
-          if (blob.size > 0) {
-            sendChunk(blob, "WEBM_OPUS", 48000).catch((error) => {
-              console.error("Chunk processing error:", error);
-            });
-          }
-        }
-        // Chain: immediately start the next chunk recording
-        startRecordingChunk();
-      };
-
-      mediaRecorder.onerror = (e) => {
-        console.error("MediaRecorder error:", e);
-        if (isCapturing && mediaStream?.active) {
-          setTimeout(startRecordingChunk, 500);
-        }
-      };
-
-      mediaRecorder.start();
-
-      // Stop after 2.5 seconds → triggers onstop → sends complete file → chains next
-      setTimeout(() => {
-        if (mediaRecorder && mediaRecorder.state === "recording") {
-          mediaRecorder.stop();
-        }
-      }, 2500);
-    }
-
-    // Kick off the recording chain
-    startRecordingChunk();
+      }
+    }, 2000);
 
     // Automatically launch Picture-in-Picture Floating Subtitles as soon as capture begins!
     setTimeout(() => {
