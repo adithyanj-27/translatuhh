@@ -141,6 +141,23 @@
     <canvas id="pipCanvas" width="640" height="240" style="display: none;"></canvas>
     <video id="pipVideo" autoplay muted playsinline style="display: none;"></video>
 
+    <!-- Native app style permission overlay -->
+    <div id="permissionOverlay" class="permission-overlay" style="display: none;">
+      <div class="permission-card">
+        <div class="permission-icon-glow">
+          <svg viewBox="0 0 24 24" width="32" height="32" fill="none" stroke="#0df2c9" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+            <line x1="12" y1="19" x2="12" y2="23"></line>
+            <line x1="8" y1="23" x2="16" y2="23"></line>
+          </svg>
+        </div>
+        <h2>Allow Audio Access</h2>
+        <p>Translatuhh requires microphone or system audio access to capture voice and translate it in real-time.</p>
+        <button id="grantPermissionBtn" class="primary-button launch-pip-btn" style="width: 100% !important; margin-top: 10px;">Allow Access</button>
+      </div>
+    </div>
+
     <script src="/app.js" type="module"></script>
   </body>
 </html>

@@ -691,3 +691,64 @@ updateThemeIcons(document.documentElement.getAttribute("data-theme") || "dark");
 setSupportMessage();
 resetMeter();
 checkApiStatus();
+initPermissions();
+
+// Onboarding Permission Handler (Notification + Microphone)
+async function initPermissions() {
+  // 1. Request Notification permission on page load
+  if ("Notification" in window && Notification.permission === "default") {
+    Notification.requestPermission().catch(err => console.log("Notification note:", err));
+  }
+
+  const overlay = document.querySelector("#permissionOverlay");
+  const grantBtn = document.querySelector("#grantPermissionBtn");
+  if (!overlay || !grantBtn) return;
+
+  // Don't show permission overlay if not in a secure context (since request will fail immediately anyway)
+  if (!window.isSecureContext) return;
+
+  // Check microphone permission state via permissions API if supported
+  if (navigator.permissions && navigator.permissions.query) {
+    try {
+      const status = await navigator.permissions.query({ name: "microphone" });
+      if (status.state === "prompt") {
+        overlay.style.display = "flex";
+      }
+      status.onchange = () => {
+        if (status.state === "granted") {
+          overlay.style.display = "none";
+        }
+      };
+    } catch (e) {
+      // Fallback: If querying microphone permission throws, check local storage
+      if (!localStorage.getItem("audio_permission_granted")) {
+        overlay.style.display = "flex";
+      }
+    }
+  } else {
+    // Legacy fallback using localStorage
+    if (!localStorage.getItem("audio_permission_granted")) {
+      overlay.style.display = "flex";
+    }
+  }
+
+  grantBtn.addEventListener("click", async () => {
+    try {
+      setStatus("Accessing microphone");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Close tracks immediately since we only wanted to test permission
+      stream.getTracks().forEach((track) => track.stop());
+      localStorage.setItem("audio_permission_granted", "true");
+      overlay.style.display = "none";
+      setStatus("Idle");
+
+      // Auto-trigger notification request as well once audio is granted
+      if ("Notification" in window && Notification.permission === "default") {
+        await Notification.requestPermission();
+      }
+    } catch (err) {
+      console.error("Audio permission request denied:", err);
+      alert("Microphone permission is required to capture sound. Please grant access in your browser settings.");
+    }
+  });
+}
