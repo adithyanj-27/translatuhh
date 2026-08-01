@@ -113,8 +113,9 @@ async function transcribeWithGoogle(audioBuffer, apiKey, sourceLanguage, encodin
   return { original: transcript, detectedLanguage };
 }
 
-async function translateWithGoogle(text, targetLanguage, apiKey) {
+async function translateWithGoogle(text, targetLanguage, apiKey, contextText = "") {
   const targetCode = googleLanguageCodes[targetLanguage] || "en";
+  const queryPayload = contextText ? [contextText, text] : text;
 
   const response = await fetch(
     `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`,
@@ -122,7 +123,7 @@ async function translateWithGoogle(text, targetLanguage, apiKey) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        q: text,
+        q: queryPayload,
         target: targetCode,
         format: "text"
       })
@@ -136,8 +137,11 @@ async function translateWithGoogle(text, targetLanguage, apiKey) {
   }
 
   const data = await response.json();
-  const translated = data.data?.translations?.[0]?.translatedText || text;
-  const detectedLanguage = data.data?.translations?.[0]?.detectedSourceLanguage || "auto";
+  const translations = data.data?.translations || [];
+  const targetObj = translations.length > 1 ? translations[1] : translations[0];
+
+  const translated = targetObj?.translatedText || text;
+  const detectedLanguage = targetObj?.detectedSourceLanguage || "auto";
 
   return { translated, detectedLanguage };
 }
@@ -152,6 +156,7 @@ export default async function handler(req, res) {
     const body = await readRequestBody(req);
     const sourceLanguage = req.headers["x-source-language"] || "English";
     const targetLanguage = req.headers["x-target-language"] || "English";
+    const contextText = req.headers["x-context-text"] || "";
     const encoding = req.headers["x-audio-encoding"] || "WEBM_OPUS";
     const sampleRate = parseInt(req.headers["x-audio-sample-rate"] || "48000", 10);
     const apiKey = process.env.GOOGLE_API_KEY;
@@ -175,7 +180,8 @@ export default async function handler(req, res) {
           const translation = await translateWithGoogle(
             transcript.original,
             targetLanguage,
-            apiKey
+            apiKey,
+            contextText
           );
 
           return res.status(200).json({

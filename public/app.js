@@ -52,6 +52,7 @@ const pipVideo = document.querySelector("#pipVideo");
 const installPwaBtn = document.querySelector("#installPwaBtn");
 
 let mediaStream;
+let lastRecognizedText = "";
 let mediaRecorder;
 let audioContext;
 let analyser;
@@ -285,6 +286,10 @@ function addCaption(caption) {
     return;
   }
 
+  if (caption.original) {
+    lastRecognizedText = caption.original;
+  }
+
   if (captionCount === 0) {
     captionList.innerHTML = "";
   }
@@ -375,6 +380,7 @@ async function sendChunk(blob, encoding = "WEBM_OPUS", sampleRate = 48000) {
       "content-type": blob.type || "application/octet-stream",
       "x-source-language": sourceLanguage.value,
       "x-target-language": targetLanguage.value,
+      "x-context-text": lastRecognizedText,
       "x-audio-encoding": encoding,
       "x-audio-sample-rate": sampleRate.toString()
     },

@@ -7,47 +7,21 @@ try {
   if (match) apiKey = match[1].trim();
 } catch (e) {}
 
-console.log("Testing full pipeline with key:", apiKey ? apiKey.substring(0, 10) + "..." : "NONE");
-
-async function testFullPipeline() {
-  // 1-second sample silent/test PCM buffer
-  const sampleAudio = Buffer.alloc(48000 * 2); // 1 sec of 16-bit mono 48kHz PCM
-  const base64Audio = sampleAudio.toString("base64");
-
-  console.log("\n1. Testing Speech-to-Text with audio buffer...");
-  const speechRes = await fetch(`https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`, {
+async function testContextTranslation() {
+  console.log("Testing array context translation with Google Translate API...");
+  const res = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${apiKey}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      config: {
-        encoding: "LINEAR16",
-        sampleRateHertz: 48000,
-        languageCode: "en-US"
-      },
-      audio: {
-        content: base64Audio
-      }
-    })
-  });
-
-  console.log("Speech-to-Text HTTP Status:", speechRes.status);
-  const speechData = await speechRes.json();
-  console.log("Speech Result:", JSON.stringify(speechData, null, 2));
-
-  console.log("\n2. Testing Translation...");
-  const transRes = await fetch(`https://translation.googleapis.com/language/translate/v2?key=${apiKey}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      q: "Testing live system audio translation",
-      target: "hi",
+      q: ["കടന്നു കയറുന്ന ആൾ", "അയാൾ വീട്ടിലേക്ക് പ്രവേശിച്ചു"],
+      target: "en",
       format: "text"
     })
   });
 
-  console.log("Translation HTTP Status:", transRes.status);
-  const transData = await transRes.json();
-  console.log("Translation Result:", JSON.stringify(transData, null, 2));
+  console.log("Status:", res.status);
+  const data = await res.json();
+  console.log("Result:", JSON.stringify(data, null, 2));
 }
 
-testFullPipeline();
+testContextTranslation();
