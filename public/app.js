@@ -554,19 +554,53 @@ async function startCapture() {
 
     if (navigator.mediaDevices?.getDisplayMedia && !isMobileDevice) {
       setStatus("Select system sound");
-      stream = await navigator.mediaDevices.getDisplayMedia({
-        video: true,
-        audio: true
-      });
+      try {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: {
+            suppressLocalAudioPlayback: false
+          },
+          systemAudio: "include",
+          surfaceSwitching: "include",
+          selfBrowserSurface: "include"
+        });
+      } catch (err) {
+        // Fallback to getUserMedia if getDisplayMedia fails or is cancelled
+        if (err.name === "NotAllowedError" || err.name === "AbortError") {
+          pipButton.disabled = false;
+          setStatus("Idle");
+          return;
+        }
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true
+          }
+        });
+      }
     } else {
       setStatus("Accessing microphone");
       stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 48000
+          noiseSuppression: true
         }
       });
+    }
+
+    // Fallback: If screen share has no audio track (e.g. user didn't check 'Share audio'), add microphone audio!
+    if (stream && stream.getAudioTracks().length === 0) {
+      try {
+        const micStream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true
+          }
+        });
+        micStream.getAudioTracks().forEach(track => stream.addTrack(track));
+      } catch (e) {
+        console.warn("Could not attach fallback mic audio track:", e);
+      }
     }
 
     pipButton.disabled = true;
@@ -578,7 +612,7 @@ async function startCapture() {
       stopCapture();
       supportNote.hidden = false;
       supportNote.textContent =
-        "No audio track was captured. Please grant audio permission and try again.";
+        "No audio track was captured. Please ensure microphone or system audio permission is allowed.";
       return;
     }
 
