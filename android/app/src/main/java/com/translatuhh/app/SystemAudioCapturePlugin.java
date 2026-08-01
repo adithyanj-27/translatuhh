@@ -78,7 +78,7 @@ public class SystemAudioCapturePlugin extends Plugin {
 
     @PluginMethod
     public void startCapture(PluginCall call) {
-        if (!getPermissionState("audio").equals(com.getcapacitor.PermissionState.GRANTED)) {
+        if (getPermissionState("audio") != com.getcapacitor.PermissionState.GRANTED) {
             savedCall = call;
             requestPermissionForAlias("audio", call, "audioPermissionCallback");
             return;
@@ -89,7 +89,7 @@ public class SystemAudioCapturePlugin extends Plugin {
     
     @PermissionCallback
     private void audioPermissionCallback(PluginCall call) {
-        if (getPermissionState("audio").equals(com.getcapacitor.PermissionState.GRANTED)) {
+        if (getPermissionState("audio") == com.getcapacitor.PermissionState.GRANTED) {
             launchMediaProjectionRequest(call);
         } else {
             call.reject("Audio recording permission was denied by the user.");
