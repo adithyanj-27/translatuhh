@@ -734,8 +734,29 @@ async function initPermissions() {
 
   grantBtn.addEventListener("click", async () => {
     try {
-      setStatus("Accessing microphone");
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      setStatus("Accessing audio");
+      let stream;
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+      if (navigator.mediaDevices?.getDisplayMedia && !isMobileDevice) {
+        stream = await navigator.mediaDevices.getDisplayMedia({
+          video: true,
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 48000
+          }
+        });
+      } else {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            sampleRate: 48000
+          }
+        });
+      }
+
       // Close tracks immediately since we only wanted to test permission
       stream.getTracks().forEach((track) => track.stop());
       localStorage.setItem("audio_permission_granted", "true");
@@ -748,7 +769,7 @@ async function initPermissions() {
       }
     } catch (err) {
       console.error("Audio permission request denied:", err);
-      alert("Microphone permission is required to capture sound. Please grant access in your browser settings.");
+      alert("Audio capture access is required to translate. Please allow access to proceed.");
     }
   });
 }
