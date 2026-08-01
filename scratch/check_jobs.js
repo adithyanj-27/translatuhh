@@ -1,26 +1,33 @@
-const runId = "30684921572";
-const url = `https://api.github.com/repos/adithyanj-27/translatuhh/actions/runs/${runId}/jobs`;
+const runsUrl = "https://api.github.com/repos/adithyanj-27/translatuhh/actions/runs?per_page=1";
 
 async function main() {
   try {
-    const res = await fetch(url, {
+    const runsRes = await fetch(runsUrl, {
       headers: { 'User-Agent': 'Mozilla/5.0' }
     });
-    const data = await res.json();
-    for (const job of data.jobs || []) {
-      if (job.conclusion === "failure") {
-        console.log(`Job ID: ${job.id}`);
-        // Fetch logs
-        const logRes = await fetch(`https://api.github.com/repos/adithyanj-27/translatuhh/actions/jobs/${job.id}/logs`, {
-          headers: { 'User-Agent': 'Mozilla/5.0' }
-        });
-        const logsText = await logRes.text();
-        console.log("=== LOGS ===");
-        // Log text contains timestamped lines. Let's find where the sync step fails.
-        // We'll print the last 150 lines of logs to locate the error.
-        const lines = logsText.split("\n");
-        const startIndex = Math.max(0, lines.length - 150);
-        console.log(lines.slice(startIndex).join("\n"));
+    const runsData = await runsRes.json();
+    const latestRun = runsData.workflow_runs?.[0];
+    
+    if (!latestRun) {
+      console.log("No runs found.");
+      return;
+    }
+
+    console.log(`Latest Run ID: ${latestRun.id}`);
+    console.log(`Name: ${latestRun.name}`);
+    console.log(`Status: ${latestRun.status}`);
+    console.log(`Conclusion: ${latestRun.conclusion}`);
+    console.log(`HTML URL: ${latestRun.html_url}`);
+    
+    const jobsRes = await fetch(latestRun.jobs_url, {
+      headers: { 'User-Agent': 'Mozilla/5.0' }
+    });
+    const jobsData = await jobsRes.json();
+    console.log("\n=== JOBS ===");
+    for (const job of jobsData.jobs || []) {
+      console.log(`Job: ${job.name} - Status: ${job.status} - Conclusion: ${job.conclusion}`);
+      for (const step of job.steps || []) {
+        console.log(`  Step: ${step.name} - Status: ${step.status} - Conclusion: ${step.conclusion}`);
       }
     }
   } catch (err) {
