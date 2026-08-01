@@ -714,6 +714,10 @@ async function startCapture() {
     // AudioContext for audio meter visualization & continuous 16kHz WAV encoding
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;
     audioContext = new AudioContextClass();
+    if (audioContext.state === "suspended") {
+      audioContext.resume().catch(e => console.log("AudioContext resume note:", e));
+    }
+
     const sourceNode = audioContext.createMediaStreamSource(new MediaStream(audioTracks));
     
     analyser = audioContext.createAnalyser();
@@ -739,11 +743,15 @@ async function startCapture() {
     sourceNode.connect(processor);
     processor.connect(audioContext.destination);
 
-    // Send a 16kHz LINEAR16 WAV chunk every 2.0 seconds continuously
-    const wavInterval = setInterval(() => {
+    // Watchdog timer: ensure audioContext is active and send 16kHz WAV chunks every 2.0s
+    const wavInterval = setInterval(async () => {
       if (!isCapturing) {
         clearInterval(wavInterval);
         return;
+      }
+
+      if (audioContext && audioContext.state === "suspended") {
+        try { await audioContext.resume(); } catch (e) {}
       }
 
       if (pcmSamples.length > 0) {
@@ -757,6 +765,23 @@ async function startCapture() {
         }
       }
     }, 2000);
+
+    // Parallel MediaRecorder Fallback: continuous WebM Opus recording for browsers where AudioContext is throttled
+    try {
+      const mimeType = getSupportedMimeType();
+      const audioOnlyStream = new MediaStream(audioTracks);
+      mediaRecorder = new MediaRecorder(audioOnlyStream, { mimeType: mimeType || undefined });
+
+      mediaRecorder.ondataavailable = (e) => {
+        if (e.data && e.data.size > 0) {
+          sendChunk(e.data, "WEBM_OPUS", 48000).catch(err => console.log("MediaRecorder chunk note:", err));
+        }
+      };
+
+      mediaRecorder.start(2500); // Fire ondataavailable every 2.5s
+    } catch (e) {
+      console.warn("MediaRecorder parallel setup note:", e);
+    }
 
     // Automatically launch Picture-in-Picture Floating Subtitles as soon as capture begins!
     setTimeout(() => {
