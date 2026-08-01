@@ -598,7 +598,7 @@ async function startCapture() {
         if (chunkRecorder.state === "recording") {
           chunkRecorder.stop();
         }
-      }, 3500);
+      }, 1500);
     }
 
     recordNextChunk();

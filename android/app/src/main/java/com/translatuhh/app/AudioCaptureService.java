@@ -128,7 +128,7 @@ public class AudioCaptureService extends Service {
                 public void run() {
                     byte[] buffer = new byte[bufferSize];
                     java.io.ByteArrayOutputStream chunkBuffer = new java.io.ByteArrayOutputStream();
-                    int targetChunkBytes = 48000 * 2 * 2; // 2 seconds of 16-bit 48kHz mono PCM (192,000 bytes)
+                    int targetChunkBytes = (int) (48000 * 2 * 1.5); // 1.5 seconds of 16-bit 48kHz mono PCM (144,000 bytes)
 
                     while (isRecording) {
                         int readBytes = audioRecord.read(buffer, 0, buffer.length);
