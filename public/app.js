@@ -1,6 +1,7 @@
 
 const isCapacitor = typeof window.Capacitor !== "undefined";
 const SystemAudioCapture = isCapacitor ? window.Capacitor.Plugins.SystemAudioCapture : null;
+let serverUrl = localStorage.getItem("backend_server_url") || "";
 
 // Helper to convert native base64 PCM stream back to binary Blob
 function base64ToBlob(base64, mimeType = "audio/pcm") {
@@ -35,7 +36,12 @@ const exportButton = document.querySelector("#exportButton");
 // Floating Overlay (PiP) Drivers
 const pipButton = document.querySelector("#pipButton");
 if (isCapacitor && pipButton) {
-  pipButton.style.display = "none";
+  // Mobile app styling for the start button
+  pipButton.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg> Start Capture`;
+  
+  // Show backend URL input config row on mobile
+  const serverUrlRow = document.querySelector("#serverUrlRow");
+  if (serverUrlRow) serverUrlRow.style.display = "block";
 }
 const pipCanvas = document.querySelector("#pipCanvas");
 const pipCanvasCtx = pipCanvas?.getContext("2d");
@@ -358,7 +364,8 @@ function addCaption(caption) {
 async function sendChunk(blob, encoding = "WEBM_OPUS", sampleRate = 48000) {
   if (!blob.size) return;
 
-  const response = await fetch("/api/audio-chunk", {
+  const baseUrl = (isCapacitor && serverUrl) ? serverUrl : "";
+  const response = await fetch(baseUrl + "/api/audio-chunk", {
     method: "POST",
     headers: {
       "content-type": blob.type || "application/octet-stream",
@@ -647,7 +654,8 @@ async function checkApiStatus() {
   const badgeText = apiBadge.querySelector(".badge-text");
 
   try {
-    const response = await fetch("/api/status");
+    const baseUrl = (isCapacitor && serverUrl) ? serverUrl : "";
+    const response = await fetch(baseUrl + "/api/status");
     if (response.ok) {
       const data = await response.json();
       if (data.hasApiKey) {
@@ -767,6 +775,36 @@ clearButton.addEventListener("click", () => {
 updateThemeIcons(document.documentElement.getAttribute("data-theme") || "dark");
 setSupportMessage();
 resetMeter();
+
+// Set up server URL input bindings for Capacitor
+const serverUrlInput = document.querySelector("#serverUrlInput");
+const saveServerUrlBtn = document.querySelector("#saveServerUrlBtn");
+if (serverUrlInput) serverUrlInput.value = serverUrl;
+if (saveServerUrlBtn && serverUrlInput) {
+  saveServerUrlBtn.addEventListener("click", async () => {
+    let val = serverUrlInput.value.trim();
+    if (val && val.endsWith("/")) {
+      val = val.substring(0, val.length - 1);
+    }
+    localStorage.setItem("backend_server_url", val);
+    serverUrl = val;
+    setStatus("Connecting...");
+    await checkApiStatus();
+    setStatus("Idle");
+  });
+}
+
+// Make API badge double as a manual Refresh button
+const apiBadge = document.querySelector("#apiBadge");
+if (apiBadge) {
+  apiBadge.style.cursor = "pointer";
+  apiBadge.addEventListener("click", async () => {
+    setStatus("Checking...");
+    await checkApiStatus();
+    setStatus("Idle");
+  });
+}
+
 checkApiStatus();
 initPermissions();
 

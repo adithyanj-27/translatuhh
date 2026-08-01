@@ -84,6 +84,17 @@
               </select>
             </label>
           </div>
+          
+          <!-- Server URL Input (visible in Capacitor) -->
+          <div class="control-row" id="serverUrlRow" style="display: none; margin-top: 12px; width: 100%;">
+            <label class="select-label" for="serverUrlInput" style="width: 100%;">
+              Backend Server URL
+              <div style="display: flex; gap: 8px; margin-top: 6px; width: 100%;">
+                <input type="url" id="serverUrlInput" placeholder="https://your-server.vercel.app" style="flex: 1;">
+                <button class="ghost-button" id="saveServerUrlBtn" type="button" style="height: 44px; padding: 0 16px;">Connect</button>
+              </div>
+            </label>
+          </div>
 
           <div class="action-row">
             <button class="primary-button launch-pip-btn" id="pipButton" type="button" title="Start floating subtitles pinned over other apps">

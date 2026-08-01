@@ -485,6 +485,29 @@ select:focus {
   box-shadow: 0 0 0 3px rgba(var(--accent-cyan-rgb), 0.2);
 }
 
+input[type="url"] {
+  height: 44px;
+  padding: 0 18px;
+  border-radius: 12px;
+  background: var(--control-bg);
+  border: 1px solid var(--control-border);
+  color: var(--control-text);
+  font-size: 0.92rem;
+  font-weight: 600;
+  outline: none;
+  backdrop-filter: blur(12px);
+  transition: var(--transition-fast);
+}
+
+input[type="url"]:hover {
+  border-color: var(--control-hover-border);
+}
+
+input[type="url"]:focus {
+  border-color: var(--accent-cyan);
+  box-shadow: 0 0 0 3px rgba(var(--accent-cyan-rgb), 0.2);
+}
+
 /* Styled Action Buttons */
 .primary-button,
 .pip-button,
