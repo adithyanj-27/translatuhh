@@ -368,6 +368,37 @@ function addCaption(caption) {
   if (!pauseScroll) {
     captionList.scrollTop = captionList.scrollHeight;
   }
+function encodeWAV(samples, sampleRate = 16000) {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+
+  function writeString(offset, string) {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  }
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + samples.length * 2, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); // PCM
+  view.setUint16(22, 1, true); // Mono
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeString(36, 'data');
+  view.setUint32(40, samples.length * 2, true);
+
+  let offset = 44;
+  for (let i = 0; i < samples.length; i++, offset += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+  }
+
+  return new Blob([view], { type: 'audio/wav' });
 }
 
 async function sendChunk(blob, encoding = "WEBM_OPUS", sampleRate = 48000) {
@@ -553,55 +584,39 @@ async function startCapture() {
     stopButton.disabled = false;
     setStatus("Listening", true);
 
-    audioContext = new AudioContext();
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    audioContext = new AudioContextClass({ sampleRate: 16000 });
     const sourceNode = audioContext.createMediaStreamSource(new MediaStream(audioTracks));
     analyser = audioContext.createAnalyser();
     analyser.fftSize = 512;
     sourceNode.connect(analyser);
     drawMeter();
 
-    const options = {};
-    const mimeType = getSupportedMimeType();
-    if (mimeType) {
-      options.mimeType = mimeType;
-    }
+    // Continuous 16kHz LINEAR16 WAV Processor
+    const scriptNode = audioContext.createScriptProcessor(4096, 1, 1);
+    let pcmSamples = [];
+    const targetSampleCount = 16000 * 2.5; // 2.5 seconds of 16kHz audio
 
-    function recordNextChunk() {
+    scriptNode.onaudioprocess = (e) => {
       if (!mediaStream || !mediaStream.active) return;
-      const tracks = mediaStream.getAudioTracks();
-      if (tracks.length === 0 || tracks[0].readyState !== "live") return;
+      const inputBuffer = e.inputBuffer.getChannelData(0);
+      for (let i = 0; i < inputBuffer.length; i++) {
+        pcmSamples.push(inputBuffer[i]);
+      }
 
-      const chunkRecorder = new MediaRecorder(new MediaStream(tracks), options);
-      const chunks = [];
+      if (pcmSamples.length >= targetSampleCount) {
+        const samplesToEncode = new Float32Array(pcmSamples);
+        pcmSamples = [];
+        const wavBlob = encodeWAV(samplesToEncode, 16000);
+        sendChunk(wavBlob, "LINEAR16", 16000).catch((error) => {
+          console.error("WAV Chunk processing error:", error);
+          setStatus("Backend error");
+        });
+      }
+    };
 
-      chunkRecorder.ondataavailable = (event) => {
-        if (event.data && event.data.size > 0) {
-          chunks.push(event.data);
-        }
-      };
-
-      chunkRecorder.onstop = () => {
-        if (chunks.length > 0) {
-          const completeBlob = new Blob(chunks, { type: mimeType || "audio/webm" });
-          sendChunk(completeBlob).catch((error) => {
-            console.error("Chunk processing error:", error);
-            setStatus("Backend error");
-          });
-        }
-        if (mediaStream && mediaStream.active) {
-          setTimeout(recordNextChunk, 100);
-        }
-      };
-
-      chunkRecorder.start();
-      setTimeout(() => {
-        if (chunkRecorder.state === "recording") {
-          chunkRecorder.stop();
-        }
-      }, 1500);
-    }
-
-    recordNextChunk();
+    sourceNode.connect(scriptNode);
+    scriptNode.connect(audioContext.destination);
 
     // Automatically launch Picture-in-Picture Floating Subtitles as soon as capture begins!
     setTimeout(() => {
