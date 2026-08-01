@@ -52,10 +52,6 @@ function setSupportMessage() {
     supportNote.hidden = false;
     supportNote.textContent =
       "Secure context (HTTPS) is required for audio/mic capture. If testing on mobile, please open the deployed HTTPS site.";
-  } else if (!canShareScreen) {
-    supportNote.hidden = false;
-    supportNote.textContent =
-      "System audio capture is restricted on this browser context. Microphone audio will be used instead.";
   }
 }
 
