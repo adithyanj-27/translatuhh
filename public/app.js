@@ -560,16 +560,42 @@ async function startCapture() {
       options.mimeType = mimeType;
     }
 
-    mediaRecorder = new MediaRecorder(new MediaStream(audioTracks), options);
+    function recordNextChunk() {
+      if (!mediaStream || !mediaStream.active) return;
+      const tracks = mediaStream.getAudioTracks();
+      if (tracks.length === 0 || tracks[0].readyState !== "live") return;
 
-    mediaRecorder.addEventListener("dataavailable", (event) => {
-      sendChunk(event.data).catch((error) => {
-        console.error(error);
-        setStatus("Backend error");
-      });
-    });
+      const chunkRecorder = new MediaRecorder(new MediaStream(tracks), options);
+      const chunks = [];
 
-    mediaRecorder.start(4000);
+      chunkRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      chunkRecorder.onstop = () => {
+        if (chunks.length > 0) {
+          const completeBlob = new Blob(chunks, { type: mimeType || "audio/webm" });
+          sendChunk(completeBlob).catch((error) => {
+            console.error("Chunk processing error:", error);
+            setStatus("Backend error");
+          });
+        }
+        if (mediaStream && mediaStream.active) {
+          setTimeout(recordNextChunk, 100);
+        }
+      };
+
+      chunkRecorder.start();
+      setTimeout(() => {
+        if (chunkRecorder.state === "recording") {
+          chunkRecorder.stop();
+        }
+      }, 3500);
+    }
+
+    recordNextChunk();
 
     // Automatically launch Picture-in-Picture Floating Subtitles as soon as capture begins!
     setTimeout(() => {
