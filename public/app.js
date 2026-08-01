@@ -639,9 +639,13 @@ async function startCapture() {
 
     function startRecordingChunk() {
       if (!isCapturing || !mediaStream || !mediaStream.active) return;
+      const tracks = mediaStream.getAudioTracks();
+      if (tracks.length === 0 || tracks[0].readyState !== "live") return;
 
       try {
-        mediaRecorder = new MediaRecorder(mediaStream, {
+        // Create MediaRecorder from AUDIO TRACKS ONLY (not full display mediaStream which has video)
+        const audioOnlyStream = new MediaStream(tracks);
+        mediaRecorder = new MediaRecorder(audioOnlyStream, {
           mimeType: mimeType || undefined
         });
       } catch (e) {
