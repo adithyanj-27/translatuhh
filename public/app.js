@@ -655,11 +655,34 @@ themeToggle.addEventListener("click", () => {
 });
 
 // Font size adjustments
+function setFontSize(newSize) {
+  captionList.setAttribute("data-size", newSize);
+  localStorage.setItem("caption_font_size", newSize);
+  
+  if (pipWindow && pipWindow.document) {
+    const container = pipWindow.document.querySelector(".pip-container");
+    if (container) {
+      const fontSizeMap = {
+        small: "13px",
+        medium: "17px",
+        large: "22px",
+        xlarge: "28px"
+      };
+      const transEl = pipWindow.document.querySelector("#pipTranslated");
+      if (transEl) transEl.style.fontSize = fontSizeMap[newSize] || "17px";
+    }
+  }
+}
+
+// Restore saved font size
+const savedSize = localStorage.getItem("caption_font_size") || "medium";
+setFontSize(savedSize);
+
 fontSizeDec.addEventListener("click", () => {
   const currentSize = captionList.getAttribute("data-size") || "medium";
   const currentIndex = sizeSteps.indexOf(currentSize);
   if (currentIndex > 0) {
-    captionList.setAttribute("data-size", sizeSteps[currentIndex - 1]);
+    setFontSize(sizeSteps[currentIndex - 1]);
   }
 });
 
@@ -667,7 +690,7 @@ fontSizeInc.addEventListener("click", () => {
   const currentSize = captionList.getAttribute("data-size") || "medium";
   const currentIndex = sizeSteps.indexOf(currentSize);
   if (currentIndex < sizeSteps.length - 1) {
-    captionList.setAttribute("data-size", sizeSteps[currentIndex + 1]);
+    setFontSize(sizeSteps[currentIndex + 1]);
   }
 });
 
