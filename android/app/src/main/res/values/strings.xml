@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Translatuhh</string>
+    <string name="title_activity_main">Translatuhh</string>
+    <string name="package_name">com.translatuhh.app</string>
+    <string name="custom_url_scheme">com.translatuhh.app</string>
+</resources>

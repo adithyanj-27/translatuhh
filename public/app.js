@@ -1,4 +1,18 @@
 
+const isCapacitor = typeof window.Capacitor !== "undefined";
+const SystemAudioCapture = isCapacitor ? window.Capacitor.Plugins.SystemAudioCapture : null;
+
+// Helper to convert native base64 PCM stream back to binary Blob
+function base64ToBlob(base64, mimeType = "audio/pcm") {
+  const byteCharacters = atob(base64);
+  const byteNumbers = new Array(byteCharacters.length);
+  for (let i = 0; i < byteCharacters.length; i++) {
+    byteNumbers[i] = byteCharacters.charCodeAt(i);
+  }
+  const byteArray = new Uint8Array(byteNumbers);
+  return new Blob([byteArray], { type: mimeType });
+}
+
 const stopButton = document.querySelector("#stopButton");
 const clearButton = document.querySelector("#clearButton");
 const previewVideo = document.querySelector("#previewVideo");
@@ -338,14 +352,16 @@ function addCaption(caption) {
   }
 }
 
-async function sendChunk(blob) {
+async function sendChunk(blob, encoding = "WEBM_OPUS", sampleRate = 48000) {
   if (!blob.size) return;
 
   const response = await fetch("/api/audio-chunk", {
     method: "POST",
     headers: {
       "content-type": blob.type || "application/octet-stream",
-      "x-target-language": targetLanguage.value
+      "x-target-language": targetLanguage.value,
+      "x-audio-encoding": encoding,
+      "x-audio-sample-rate": sampleRate.toString()
     },
     body: blob
   });
@@ -358,6 +374,23 @@ async function sendChunk(blob) {
 }
 
 function stopCapture() {
+  if (isCapacitor && SystemAudioCapture) {
+    try {
+      SystemAudioCapture.removeAllListeners();
+      SystemAudioCapture.stopCapture().catch(e => console.error(e));
+    } catch (e) {
+      console.error("Error stopping native capture:", e);
+    }
+    pipButton.disabled = false;
+    stopButton.disabled = true;
+    setStatus("Idle");
+    resetMeter();
+    lastCaptionTime = null;
+    lastDetectedLanguage = null;
+    lastCardElement = null;
+    return;
+  }
+
   if (mediaRecorder?.state === "recording") {
     mediaRecorder.stop();
   }
@@ -405,6 +438,49 @@ function getSupportedMimeType() {
 }
 
 async function startCapture() {
+  if (isCapacitor && SystemAudioCapture) {
+    try {
+      pipButton.disabled = true;
+      setStatus("Accessing audio");
+
+      await SystemAudioCapture.startCapture();
+
+      stopButton.disabled = false;
+      setStatus("Listening", true);
+
+      // Listen for chunks from native Android projection service
+      SystemAudioCapture.addListener("onAudioChunk", (data) => {
+        if (data && data.chunk) {
+          const blob = base64ToBlob(data.chunk, "audio/pcm");
+          sendChunk(blob, "LINEAR16", 48000).catch((error) => {
+            console.error(error);
+            setStatus("Backend error");
+          });
+        }
+      });
+
+      SystemAudioCapture.addListener("onError", (data) => {
+        console.error("Native audio capture error:", data.message);
+        setStatus("Capture error");
+        stopCapture();
+      });
+
+      // Automatically launch Picture-in-Picture Floating Subtitles
+      setTimeout(() => {
+        if (!pipWindow && !document.pictureInPictureElement) {
+          togglePictureInPicture().catch((err) => console.log("PiP auto launch note:", err));
+        }
+      }, 400);
+
+      return;
+    } catch (error) {
+      console.error(error);
+      stopCapture();
+      setStatus("Permission denied");
+      return;
+    }
+  }
+
   if (!window.isSecureContext) {
     setStatus("HTTPS required");
     alert("Audio capture requires a secure context (HTTPS). If testing on a mobile device, please access the deployed HTTPS Vercel URL.");

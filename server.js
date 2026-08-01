@@ -97,7 +97,7 @@ function sendJson(response, statusCode, body) {
   response.end(JSON.stringify(body));
 }
 
-async function transcribeWithGoogle(audioBuffer, apiKey) {
+async function transcribeWithGoogle(audioBuffer, apiKey, encoding = "WEBM_OPUS", sampleRate = 48000) {
   const base64Audio = audioBuffer.toString("base64");
   
   const response = await fetch(
@@ -107,8 +107,8 @@ async function transcribeWithGoogle(audioBuffer, apiKey) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         config: {
-          encoding: "WEBM_OPUS",
-          sampleRateHertz: 48000,
+          encoding: encoding,
+          sampleRateHertz: sampleRate,
           languageCode: "en-US",
           alternativeLanguageCodes: [
             "hi-IN", "ta-IN", "te-IN", "bn-IN", "gu-IN", 
@@ -167,6 +167,8 @@ async function translateWithGoogle(text, targetLanguage, apiKey) {
 async function handleAudioChunk(request, response) {
   const body = await readRequestBody(request);
   const targetLanguage = request.headers["x-target-language"] || "English";
+  const encoding = request.headers["x-audio-encoding"] || "WEBM_OPUS";
+  const sampleRate = parseInt(request.headers["x-audio-sample-rate"] || "48000", 10);
   const apiKey = process.env.GOOGLE_API_KEY;
 
   const hasRealApiKey = Boolean(
@@ -177,7 +179,7 @@ async function handleAudioChunk(request, response) {
 
   if (hasRealApiKey) {
     if (body.length > 0) {
-      const transcript = await transcribeWithGoogle(body, apiKey);
+      const transcript = await transcribeWithGoogle(body, apiKey, encoding, sampleRate);
       if (transcript.original) {
         const translation = await translateWithGoogle(
           transcript.original,
