@@ -824,8 +824,11 @@ async function initPermissions() {
   const grantBtn = document.querySelector("#grantPermissionBtn");
   if (!overlay || !grantBtn) return;
 
-  // Don't show permission overlay if not in a secure context (since request will fail immediately anyway)
-  if (!window.isSecureContext) return;
+  // If user has already granted or dismissed permission prompt previously, never show overlay again
+  if (localStorage.getItem("audio_permission_granted") === "true") {
+    overlay.style.display = "none";
+    return;
+  }
 
   // If in Capacitor, the native plugin handles permissions dynamically
   if (isCapacitor) {
