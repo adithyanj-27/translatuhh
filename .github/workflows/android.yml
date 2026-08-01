@@ -36,8 +36,7 @@ jobs:
       - name: Sync Capacitor Android Project
         run: |
           chmod +x android/gradlew
-          npx cap doctor > cap_doctor.log 2>&1 || true
-          npx cap sync android --verbose > cap_sync.log 2>&1 || (cat cap_sync.log && exit 1)
+          npx cap sync android
 
       - name: Build Debug APK via Gradle
         run: |
