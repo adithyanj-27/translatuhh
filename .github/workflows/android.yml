@@ -35,7 +35,8 @@ jobs:
 
       - name: Sync Capacitor Android Project
         run: |
-          npx cap sync android
+          npx cap doctor
+          npx cap sync android --verbose
 
       - name: Build Debug APK via Gradle
         run: |
