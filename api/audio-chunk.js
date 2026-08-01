@@ -6,6 +6,28 @@ export const config = {
   }
 };
 
+const googleSpeechLanguageCodes = {
+  English: "en-US",
+  Hindi: "hi-IN",
+  Bengali: "bn-IN",
+  Gujarati: "gu-IN",
+  Kannada: "kn-IN",
+  Malayalam: "ml-IN",
+  Marathi: "mr-IN",
+  Odia: "or-IN",
+  Punjabi: "pa-IN",
+  Tamil: "ta-IN",
+  Telugu: "te-IN",
+  Assamese: "as-IN",
+  Nepali: "ne-NP",
+  Urdu: "ur-IN",
+  Spanish: "es-ES",
+  French: "fr-FR",
+  German: "de-DE",
+  Japanese: "ja-JP",
+  Chinese: "zh-CN"
+};
+
 const googleLanguageCodes = {
   English: "en",
   Hindi: "hi",
@@ -56,8 +78,9 @@ async function readRequestBody(req) {
   return Buffer.concat(chunks);
 }
 
-async function transcribeWithGoogle(audioBuffer, apiKey, encoding = "WEBM_OPUS", sampleRate = 48000) {
+async function transcribeWithGoogle(audioBuffer, apiKey, sourceLanguage, encoding = "WEBM_OPUS", sampleRate = 48000) {
   const base64Audio = audioBuffer.toString("base64");
+  const speechCode = googleSpeechLanguageCodes[sourceLanguage] || "en-US";
   
   const response = await fetch(
     `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
@@ -68,11 +91,7 @@ async function transcribeWithGoogle(audioBuffer, apiKey, encoding = "WEBM_OPUS",
         config: {
           encoding: encoding,
           sampleRateHertz: sampleRate,
-          languageCode: "en-US",
-          alternativeLanguageCodes: [
-            "hi-IN", "ta-IN", "te-IN", "bn-IN", "gu-IN", 
-            "mr-IN", "ml-IN", "kn-IN", "es-ES", "fr-FR", "de-DE"
-          ]
+          languageCode: speechCode
         },
         audio: {
           content: base64Audio
@@ -84,12 +103,12 @@ async function transcribeWithGoogle(audioBuffer, apiKey, encoding = "WEBM_OPUS",
   if (!response.ok) {
     const errorText = await response.text();
     console.error("Google Speech STT error:", errorText);
-    return { original: "", detectedLanguage: "auto" };
+    return { original: "", detectedLanguage: speechCode };
   }
 
   const data = await response.json();
   const transcript = data.results?.[0]?.alternatives?.[0]?.transcript?.trim() || "";
-  const detectedLanguage = data.results?.[0]?.languageCode || "auto";
+  const detectedLanguage = data.results?.[0]?.languageCode || speechCode;
 
   return { original: transcript, detectedLanguage };
 }
@@ -131,6 +150,7 @@ export default async function handler(req, res) {
 
   try {
     const body = await readRequestBody(req);
+    const sourceLanguage = req.headers["x-source-language"] || "English";
     const targetLanguage = req.headers["x-target-language"] || "English";
     const encoding = req.headers["x-audio-encoding"] || "WEBM_OPUS";
     const sampleRate = parseInt(req.headers["x-audio-sample-rate"] || "48000", 10);
@@ -148,7 +168,7 @@ export default async function handler(req, res) {
     if (hasRealApiKey) {
       if (body.length > 0) {
         // 1. Transcribe audio with Google Speech-to-Text
-        const transcript = await transcribeWithGoogle(body, apiKey, encoding, sampleRate);
+        const transcript = await transcribeWithGoogle(body, apiKey, sourceLanguage, encoding, sampleRate);
 
         if (transcript.original) {
           // 2. Translate text with Google Translation API

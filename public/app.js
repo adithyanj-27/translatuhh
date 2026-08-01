@@ -20,6 +20,7 @@ const previewVideo = document.querySelector("#previewVideo");
 const supportNote = document.querySelector("#supportNote");
 const statusPill = document.querySelector("#statusPill");
 const targetLanguage = document.querySelector("#targetLanguage");
+const sourceLanguage = document.querySelector("#sourceLanguage");
 const detectedLanguage = document.querySelector("#detectedLanguage");
 const captionList = document.querySelector("#captionList");
 const audioMeter = document.querySelector("#audioMeter");
@@ -369,6 +370,7 @@ async function sendChunk(blob, encoding = "WEBM_OPUS", sampleRate = 48000) {
     method: "POST",
     headers: {
       "content-type": blob.type || "application/octet-stream",
+      "x-source-language": sourceLanguage.value,
       "x-target-language": targetLanguage.value,
       "x-audio-encoding": encoding,
       "x-audio-sample-rate": sampleRate.toString()
