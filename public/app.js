@@ -559,11 +559,7 @@ async function startCapture() {
       setStatus("Select system sound");
       stream = await navigator.mediaDevices.getDisplayMedia({
         video: true,
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          sampleRate: 48000
-        }
+        audio: true
       });
     } else {
       setStatus("Accessing microphone");
@@ -983,11 +979,7 @@ async function initPermissions() {
       if (navigator.mediaDevices?.getDisplayMedia && !isMobileDevice) {
         stream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            sampleRate: 48000
-          }
+          audio: true
         });
       } else {
         stream = await navigator.mediaDevices.getUserMedia({
