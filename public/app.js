@@ -636,12 +636,7 @@ async function startCapture() {
           selfBrowserSurface: "include"
         });
       } catch (err) {
-        // Fallback to getUserMedia if getDisplayMedia fails or is cancelled
-        if (err.name === "NotAllowedError" || err.name === "AbortError") {
-          pipButton.disabled = false;
-          setStatus("Idle");
-          return;
-        }
+        console.warn("getDisplayMedia not available or cancelled, falling back to microphone audio:", err);
         stream = await navigator.mediaDevices.getUserMedia({
           audio: {
             echoCancellation: true,
