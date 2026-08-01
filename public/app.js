@@ -408,6 +408,89 @@ function encodeWAV(samples, sampleRate = 16000) {
   return new Blob([view], { type: 'audio/wav' });
 }
 
+async function sendTextTranscript(text) {
+  if (!text || !text.trim()) return;
+
+  const baseUrl = (isCapacitor && serverUrl) ? serverUrl : "";
+  const response = await fetch(baseUrl + "/api/audio-chunk", {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-text-transcript": text.trim(),
+      "x-source-language": sourceLanguage.value,
+      "x-target-language": targetLanguage.value,
+      "x-context-text": lastRecognizedText
+    }
+  });
+
+  if (response.ok) {
+    addCaption(await response.json());
+  }
+}
+
+let speechRecognizer = null;
+
+function initNativeSpeechRecognition() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) return null;
+
+  try {
+    const recognition = new SpeechRecognition();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+
+    const speechLanguageCodes = {
+      English: "en-US",
+      Hindi: "hi-IN",
+      Bengali: "bn-IN",
+      Gujarati: "gu-IN",
+      Kannada: "kn-IN",
+      Malayalam: "ml-IN",
+      Marathi: "mr-IN",
+      Odia: "or-IN",
+      Punjabi: "pa-IN",
+      Tamil: "ta-IN",
+      Telugu: "te-IN",
+      Assamese: "as-IN",
+      Nepali: "ne-NP",
+      Urdu: "ur-IN",
+      Spanish: "es-ES",
+      French: "fr-FR",
+      German: "de-DE",
+      Japanese: "ja-JP",
+      Chinese: "zh-CN"
+    };
+
+    recognition.lang = speechLanguageCodes[sourceLanguage.value] || "hi-IN";
+
+    recognition.onresult = (event) => {
+      for (let i = event.resultIndex; i < event.results.length; ++i) {
+        if (event.results[i].isFinal) {
+          const transcript = event.results[i][0].transcript.trim();
+          if (transcript) {
+            sendTextTranscript(transcript).catch(e => console.error("Text translation error:", e));
+          }
+        }
+      }
+    };
+
+    recognition.onend = () => {
+      if (isCapturing && speechRecognizer) {
+        try { speechRecognizer.start(); } catch (e) {}
+      }
+    };
+
+    recognition.onerror = (e) => {
+      console.log("Native speech recognition note:", e.error);
+    };
+
+    return recognition;
+  } catch (e) {
+    console.warn("Could not create SpeechRecognition:", e);
+    return null;
+  }
+}
+
 async function sendChunk(blob, encoding = "WEBM_OPUS", sampleRate = 48000) {
   if (!blob.size) return;
 
@@ -621,6 +704,12 @@ async function startCapture() {
     stopButton.disabled = false;
     setStatus("Listening", true);
     isCapturing = true;
+
+    // Start Browser-Native Continuous Speech Recognition (Zero Lag Streaming)
+    speechRecognizer = initNativeSpeechRecognition();
+    if (speechRecognizer) {
+      try { speechRecognizer.start(); } catch (e) { console.log("SpeechRecognizer start note:", e); }
+    }
 
     // AudioContext for audio meter visualization & continuous 16kHz WAV encoding
     const AudioContextClass = window.AudioContext || window.webkitAudioContext;

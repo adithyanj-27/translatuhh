@@ -167,6 +167,7 @@ export default async function handler(req, res) {
     const contextText = req.headers["x-context-text"] || "";
     const encoding = req.headers["x-audio-encoding"] || "WEBM_OPUS";
     const sampleRate = parseInt(req.headers["x-audio-sample-rate"] || "48000", 10);
+    const textInput = req.headers["x-text-transcript"];
     const apiKey = process.env.GOOGLE_API_KEY;
 
     const hasRealApiKey = Boolean(
@@ -177,6 +178,31 @@ export default async function handler(req, res) {
 
     res.setHeader("Content-Type", "application/json; charset=utf-8");
     res.setHeader("Cache-Control", "no-store");
+
+    // Handle direct text transcript translation (from native browser speech recognition)
+    if (textInput && textInput.trim()) {
+      if (hasRealApiKey) {
+        const translation = await translateWithGoogle(textInput.trim(), targetLanguage, apiKey, contextText);
+        return res.status(200).json({
+          id: randomUUID(),
+          mode: "google-text",
+          targetLanguage,
+          detectedLanguage: translation.detectedLanguage || "auto",
+          original: textInput.trim(),
+          translated: translation.translated,
+          createdAt: new Date().toISOString()
+        });
+      }
+      return res.status(200).json({
+        id: randomUUID(),
+        mode: "demo-text",
+        targetLanguage,
+        detectedLanguage: "auto",
+        original: textInput.trim(),
+        translated: `[${targetLanguage}] ${textInput.trim()}`,
+        createdAt: new Date().toISOString()
+      });
+    }
 
     if (hasRealApiKey) {
       if (body.length > 0) {
