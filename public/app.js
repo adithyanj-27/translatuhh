@@ -16,34 +16,20 @@ function base64ToBlob(base64, mimeType = "audio/pcm") {
 
 const stopButton = document.querySelector("#stopButton");
 const clearButton = document.querySelector("#clearButton");
-const previewVideo = document.querySelector("#previewVideo");
-const supportNote = document.querySelector("#supportNote");
-const statusPill = document.querySelector("#statusPill");
-const targetLanguage = document.querySelector("#targetLanguage");
-const sourceLanguage = document.querySelector("#sourceLanguage");
+const exportButton = document.querySelector("#exportButton");
 const detectedLanguage = document.querySelector("#detectedLanguage");
-const captionList = document.querySelector("#captionList");
-const audioMeter = document.querySelector("#audioMeter");
-const meterContext = audioMeter ? audioMeter.getContext("2d") : null;
-
+const sourceLanguage = document.querySelector("#sourceLanguage");
+const targetLanguage = document.querySelector("#targetLanguage");
 const themeToggle = document.querySelector("#themeToggle");
-const sunIcon = themeToggle ? themeToggle.querySelector(".sun-icon") : null;
-const moonIcon = themeToggle ? themeToggle.querySelector(".moon-icon") : null;
-
+const sunIcon = themeToggle?.querySelector(".sun-icon");
+const moonIcon = themeToggle?.querySelector(".moon-icon");
 const fontSizeDec = document.querySelector("#fontSizeDec");
 const fontSizeInc = document.querySelector("#fontSizeInc");
-const exportButton = document.querySelector("#exportButton");
+const previewVideo = document.querySelector("#previewVideo");
 
-// Floating Overlay (PiP) Drivers
-const pipButton = document.querySelector("#pipButton");
-if (isCapacitor && pipButton) {
-  // Mobile app styling for the start button
-  pipButton.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px;"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="22"></line></svg> Start Capture`;
-  
-  // Show backend URL input config row on mobile
-  const serverUrlRow = document.querySelector("#serverUrlRow");
-  if (serverUrlRow) serverUrlRow.style.display = "block";
-}
+// Hide Backend Server URL row completely
+const serverUrlRow = document.querySelector("#serverUrlRow");
+if (serverUrlRow) serverUrlRow.style.display = "none";
 const pipCanvas = document.querySelector("#pipCanvas");
 const pipCanvasCtx = pipCanvas?.getContext("2d");
 const pipVideo = document.querySelector("#pipVideo");
