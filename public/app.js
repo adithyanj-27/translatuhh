@@ -294,7 +294,9 @@ function addCaption(caption) {
     captionList.innerHTML = "";
   }
 
-  detectedLanguage.textContent = caption.detectedLanguage || "Auto";
+  if (detectedLanguage) {
+    detectedLanguage.textContent = caption.detectedLanguage || "Auto";
+  }
 
   const timestamp = new Date(caption.createdAt || Date.now());
   const timeString = timestamp.toLocaleTimeString();
@@ -810,7 +812,7 @@ stopButton.addEventListener("click", stopCapture);
 clearButton.addEventListener("click", () => {
   captionCount = 0;
   sessionHistory = [];
-  detectedLanguage.textContent = "Waiting";
+  if (detectedLanguage) detectedLanguage.textContent = "Waiting";
   captionList.innerHTML = `
     <article class="caption-card muted">
       <p class="original">No captions yet.</p>
