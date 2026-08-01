@@ -127,14 +127,20 @@ public class AudioCaptureService extends Service {
                 @Override
                 public void run() {
                     byte[] buffer = new byte[bufferSize];
+                    java.io.ByteArrayOutputStream chunkBuffer = new java.io.ByteArrayOutputStream();
+                    int targetChunkBytes = 48000 * 2 * 2; // 2 seconds of 16-bit 48kHz mono PCM (192,000 bytes)
+
                     while (isRecording) {
                         int readBytes = audioRecord.read(buffer, 0, buffer.length);
                         if (readBytes > 0) {
-                            byte[] activeData = new byte[readBytes];
-                            System.arraycopy(buffer, 0, activeData, 0, readBytes);
-                            String base64 = Base64.encodeToString(activeData, Base64.NO_WRAP);
-                            if (listener != null) {
-                                listener.onAudioChunkCaptured(base64);
+                            chunkBuffer.write(buffer, 0, readBytes);
+                            if (chunkBuffer.size() >= targetChunkBytes) {
+                                byte[] pcmData = chunkBuffer.toByteArray();
+                                chunkBuffer.reset();
+                                String base64 = Base64.encodeToString(pcmData, Base64.NO_WRAP);
+                                if (listener != null) {
+                                    listener.onAudioChunkCaptured(base64);
+                                }
                             }
                         }
                     }

@@ -280,13 +280,18 @@ async function togglePictureInPicture() {
 }
 
 function addCaption(caption) {
+  // Ignore silent chunks that contain no recognized original or translated text
+  if (!caption || (!caption.original && !caption.translated)) {
+    return;
+  }
+
   if (captionCount === 0) {
     captionList.innerHTML = "";
   }
 
   detectedLanguage.textContent = caption.detectedLanguage || "Auto";
 
-  const timestamp = new Date(caption.createdAt);
+  const timestamp = new Date(caption.createdAt || Date.now());
   const timeString = timestamp.toLocaleTimeString();
 
   sessionHistory.push({
@@ -296,12 +301,10 @@ function addCaption(caption) {
     translated: caption.translated
   });
 
-  const pauseScroll = document.querySelector("#pauseScroll").checked;
-
   const isSameLanguage = lastDetectedLanguage === caption.detectedLanguage;
-  const isRecent = lastCaptionTime && (timestamp - lastCaptionTime < 10000);
+  const isRecent = lastCaptionTime && (timestamp - lastCaptionTime < 15000);
 
-  if (lastCardElement && isSameLanguage && isRecent && caption.original && caption.translated) {
+  if (lastCardElement && isSameLanguage && isRecent) {
     const origTextNode = lastCardElement.querySelector(".original");
     const transTextNode = lastCardElement.querySelector(".translated");
 
@@ -319,11 +322,14 @@ function addCaption(caption) {
     renderPiPFrame(origTextNode.textContent, transTextNode.textContent);
   } else {
     captionCount += 1;
+    lastDetectedLanguage = caption.detectedLanguage;
+    lastCaptionTime = timestamp;
+
     const card = document.createElement("article");
     card.className = "caption-card";
     card.innerHTML = `
       <div class="caption-meta-row">
-        <p class="caption-meta">${timeString} - ${caption.mode}</p>
+        <p class="caption-meta">${timeString} - ${caption.mode || "live"}</p>
         <div class="card-actions">
           <button class="card-action-btn copy-btn" title="Copy translated caption">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
@@ -334,8 +340,8 @@ function addCaption(caption) {
       <p class="translated"></p>
     `;
 
-    card.querySelector(".original").textContent = caption.original || "Listening...";
-    card.querySelector(".translated").textContent = caption.translated || "";
+    card.querySelector(".original").textContent = caption.original;
+    card.querySelector(".translated").textContent = caption.translated;
 
     const copyBtn = card.querySelector(".copy-btn");
     copyBtn.addEventListener("click", () => {
@@ -348,17 +354,14 @@ function addCaption(caption) {
       });
     });
 
-    captionList.prepend(card);
-    
+    captionList.appendChild(card);
     lastCardElement = card;
-    lastDetectedLanguage = caption.detectedLanguage;
-    lastCaptionTime = timestamp;
-
     renderPiPFrame(caption.original, caption.translated);
   }
 
+  const pauseScroll = document.querySelector("#pauseScroll")?.checked;
   if (!pauseScroll) {
-    captionList.scrollTop = 0;
+    captionList.scrollTop = captionList.scrollHeight;
   }
 }
 
