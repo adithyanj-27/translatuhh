@@ -82,17 +82,23 @@ async function transcribeWithGoogle(audioBuffer, apiKey, sourceLanguage, encodin
   const base64Audio = audioBuffer.toString("base64");
   const speechCode = googleSpeechLanguageCodes[sourceLanguage] || "en-US";
   
+  const config = {
+    encoding: encoding,
+    languageCode: speechCode
+  };
+
+  // Google STT API v1 rule: sampleRateHertz MUST NOT be set when encoding is WEBM_OPUS or OGG_OPUS
+  if (encoding !== "WEBM_OPUS" && encoding !== "OGG_OPUS") {
+    config.sampleRateHertz = sampleRate;
+  }
+
   const response = await fetch(
     `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        config: {
-          encoding: encoding,
-          sampleRateHertz: sampleRate,
-          languageCode: speechCode
-        },
+        config: config,
         audio: {
           content: base64Audio
         }
