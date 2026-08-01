@@ -34,6 +34,9 @@ const exportButton = document.querySelector("#exportButton");
 
 // Floating Overlay (PiP) Drivers
 const pipButton = document.querySelector("#pipButton");
+if (isCapacitor && pipButton) {
+  pipButton.style.display = "none";
+}
 const pipCanvas = document.querySelector("#pipCanvas");
 const pipCanvasCtx = pipCanvas?.getContext("2d");
 const pipVideo = document.querySelector("#pipVideo");
@@ -465,12 +468,14 @@ async function startCapture() {
         stopCapture();
       });
 
-      // Automatically launch Picture-in-Picture Floating Subtitles
-      setTimeout(() => {
-        if (!pipWindow && !document.pictureInPictureElement) {
-          togglePictureInPicture().catch((err) => console.log("PiP auto launch note:", err));
-        }
-      }, 400);
+      // Automatically launch Picture-in-Picture Floating Subtitles on Desktop
+      if (!isCapacitor) {
+        setTimeout(() => {
+          if (!pipWindow && !document.pictureInPictureElement) {
+            togglePictureInPicture().catch((err) => console.log("PiP auto launch note:", err));
+          }
+        }, 400);
+      }
 
       return;
     } catch (error) {
