@@ -67,7 +67,11 @@ public class AudioCaptureService extends Service {
         if (isRecording) return;
 
         // Start Foreground Service immediately to satisfy Android background restrictions
-        startForeground(NOTIFICATION_ID, createNotification());
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            startForeground(NOTIFICATION_ID, createNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION);
+        } else {
+            startForeground(NOTIFICATION_ID, createNotification());
+        }
 
         try {
             mediaProjection = manager.getMediaProjection(resultCode, resultData);

@@ -779,6 +779,13 @@ async function initPermissions() {
   // Don't show permission overlay if not in a secure context (since request will fail immediately anyway)
   if (!window.isSecureContext) return;
 
+  // If in Capacitor, the native plugin handles permissions dynamically
+  if (isCapacitor) {
+    overlay.style.display = "none";
+    localStorage.setItem("audio_permission_granted", "true");
+    return;
+  }
+
   // Check microphone permission state via permissions API if supported
   if (navigator.permissions && navigator.permissions.query) {
     try {
