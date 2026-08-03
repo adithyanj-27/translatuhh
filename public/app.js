@@ -1,7 +1,21 @@
 
 const isCapacitor = typeof window.Capacitor !== "undefined";
 const SystemAudioCapture = isCapacitor ? window.Capacitor.Plugins.SystemAudioCapture : null;
-let serverUrl = localStorage.getItem("backend_server_url") || (isCapacitor ? "https://translatuhh.vercel.app" : "");
+let rawServerUrl = (localStorage.getItem("backend_server_url") || "").trim();
+if (rawServerUrl.endsWith("/")) {
+  rawServerUrl = rawServerUrl.slice(0, -1);
+}
+let serverUrl = (rawServerUrl && rawServerUrl.startsWith("http"))
+  ? rawServerUrl
+  : (isCapacitor ? "https://translatuhh.vercel.app" : "");
+
+function getApiUrl(path) {
+  let base = (isCapacitor && serverUrl) ? serverUrl.trim() : "";
+  if (base.endsWith("/")) {
+    base = base.slice(0, -1);
+  }
+  return base + path;
+}
 
 // Helper to convert native base64 PCM stream back to binary Blob
 function base64ToBlob(base64, mimeType = "audio/pcm") {
@@ -402,8 +416,7 @@ function encodeWAV(samples, sampleRate = 16000) {
 async function sendTextTranscript(text) {
   if (!text || !text.trim()) return;
 
-  const baseUrl = (isCapacitor && serverUrl) ? serverUrl : "";
-  const response = await fetch(baseUrl + "/api/audio-chunk", {
+  const response = await fetch(getApiUrl("/api/audio-chunk"), {
     method: "POST",
     headers: {
       "content-type": "application/json",
@@ -485,8 +498,7 @@ function initNativeSpeechRecognition() {
 async function sendChunk(blob, encoding = "WEBM_OPUS", sampleRate = 48000) {
   if (!blob.size) return;
 
-  const baseUrl = (isCapacitor && serverUrl) ? serverUrl : "";
-  const response = await fetch(baseUrl + "/api/audio-chunk", {
+  const response = await fetch(getApiUrl("/api/audio-chunk"), {
     method: "POST",
     headers: {
       "content-type": blob.type || "application/octet-stream",
@@ -892,8 +904,7 @@ async function checkApiStatus() {
   const badgeText = apiBadge.querySelector(".badge-text");
 
   try {
-    const baseUrl = (isCapacitor && serverUrl) ? serverUrl : "";
-    const response = await fetch(baseUrl + "/api/status?t=" + Date.now());
+    const response = await fetch(getApiUrl("/api/status?t=" + Date.now()));
     if (response.ok) {
       const data = await response.json();
       if (data.hasApiKey) {
