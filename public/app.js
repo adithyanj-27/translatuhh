@@ -27,9 +27,14 @@ const fontSizeDec = document.querySelector("#fontSizeDec");
 const fontSizeInc = document.querySelector("#fontSizeInc");
 const previewVideo = document.querySelector("#previewVideo");
 
-// Hide Backend Server URL row completely
+// Show Backend Server URL row only on Capacitor
 const serverUrlRow = document.querySelector("#serverUrlRow");
-if (serverUrlRow) serverUrlRow.style.display = "none";
+if (serverUrlRow && !isCapacitor) {
+  serverUrlRow.style.display = "none";
+}
+if (serverUrlRow && isCapacitor) {
+  serverUrlRow.style.display = "block";
+}
 const pipCanvas = document.querySelector("#pipCanvas");
 const pipCanvasCtx = pipCanvas?.getContext("2d");
 const pipVideo = document.querySelector("#pipVideo");
