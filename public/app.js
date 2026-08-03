@@ -1,7 +1,7 @@
 
 const isCapacitor = typeof window.Capacitor !== "undefined";
 const SystemAudioCapture = isCapacitor ? window.Capacitor.Plugins.SystemAudioCapture : null;
-let serverUrl = localStorage.getItem("backend_server_url") || "";
+let serverUrl = localStorage.getItem("backend_server_url") || (isCapacitor ? "https://translatuhh.vercel.app" : "");
 
 // Helper to convert native base64 PCM stream back to binary Blob
 function base64ToBlob(base64, mimeType = "audio/pcm") {
