@@ -380,37 +380,20 @@ function addCaption(caption) {
   }
 }
 
-function encodeWAV(samples, sampleRate = 16000) {
-  const buffer = new ArrayBuffer(44 + samples.length * 2);
+function encodeRawPCM(samples) {
+  // Google Speech-to-Text LINEAR16 encoding expects raw 16-bit little-endian
+  // PCM samples with NO container/header. The previous encodeWAV() wrapped
+  // the data in a RIFF/WAVE header, which Google interpreted as garbage audio
+  // and returned empty transcripts — the core cause of the translation freeze.
+  const buffer = new ArrayBuffer(samples.length * 2);
   const view = new DataView(buffer);
 
-  function writeString(offset, string) {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
-  }
-
-  writeString(0, 'RIFF');
-  view.setUint32(4, 36 + samples.length * 2, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true); // PCM
-  view.setUint16(22, 1, true); // Mono
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, sampleRate * 2, true);
-  view.setUint16(32, 2, true);
-  view.setUint16(34, 16, true);
-  writeString(36, 'data');
-  view.setUint32(40, samples.length * 2, true);
-
-  let offset = 44;
-  for (let i = 0; i < samples.length; i++, offset += 2) {
+  for (let i = 0, offset = 0; i < samples.length; i++, offset += 2) {
     const s = Math.max(-1, Math.min(1, samples[i]));
     view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
   }
 
-  return new Blob([view], { type: 'audio/wav' });
+  return new Blob([view], { type: "audio/pcm" });
 }
 
 async function sendTextTranscript(text) {
@@ -478,14 +461,34 @@ function initNativeSpeechRecognition() {
       }
     };
 
+    let restartTimeout = null;
     recognition.onend = () => {
+      // Browsers fire onend after every result or after a no-speech timeout.
+      // Calling start() immediately throws InvalidStateError because the
+      // previous session hasn't fully released — the error gets swallowed by
+      // the catch below and recognition dies forever. A short delay fixes it.
       if (isCapturing && speechRecognizer) {
-        try { speechRecognizer.start(); } catch (e) {}
+        clearTimeout(restartTimeout);
+        restartTimeout = setTimeout(() => {
+          if (!isCapturing || !speechRecognizer) return;
+          try { speechRecognizer.start(); } catch (e) {
+            // If it's already running, that's fine; otherwise retry once more
+            if (e.name !== "InvalidStateError") {
+              console.warn("SpeechRecognition restart failed:", e.name);
+            }
+          }
+        }, 250);
       }
     };
 
     recognition.onerror = (e) => {
-      console.log("Native speech recognition note:", e.error);
+      // "no-speech" and "aborted" are normal during continuous capture;
+      // "not-allowed" means the mic permission was revoked.
+      if (e.error === "not-allowed" || e.error === "service-not-allowed") {
+        console.warn("SpeechRecognition permission denied:", e.error);
+      } else {
+        console.log("Native speech recognition note:", e.error);
+      }
     };
 
     return recognition;
@@ -493,6 +496,19 @@ function initNativeSpeechRecognition() {
     console.warn("Could not create SpeechRecognition:", e);
     return null;
   }
+}
+
+// Serialize chunk requests so only one is in flight at a time. Without this,
+// a slow Google STT response (1-3s) causes concurrent requests to pile up,
+// eventually triggering 429/timeouts and the translation freeze.
+let chunkChain = Promise.resolve();
+function sendChunkQueued(blob, encoding = "WEBM_OPUS", sampleRate = 48000) {
+  // Each step catches its own error so one failed chunk doesn't poison the
+  // chain and block all future chunks forever (the freeze).
+  chunkChain = chunkChain
+    .then(() => sendChunk(blob, encoding, sampleRate))
+    .catch(() => {});
+  return chunkChain;
 }
 
 async function sendChunk(blob, encoding = "WEBM_OPUS", sampleRate = 48000) {
@@ -599,7 +615,7 @@ async function startCapture() {
       SystemAudioCapture.addListener("onAudioChunk", (data) => {
         if (data && data.chunk) {
           const blob = base64ToBlob(data.chunk, "audio/pcm");
-          sendChunk(blob, "LINEAR16", 48000).catch((error) => {
+          sendChunkQueued(blob, "LINEAR16", 48000).catch((error) => {
             console.error(error);
             setStatus("Backend error");
           });
@@ -737,9 +753,13 @@ async function startCapture() {
     };
 
     sourceNode.connect(processor);
-    processor.connect(audioContext.destination);
+    // Do NOT connect processor to audioContext.destination — that pipes the
+    // captured audio back through the speakers, creating an echo loop and
+    // feeding the STT engine its own output. The ScriptProcessor still fires
+    // onaudioprocess as long as it's connected to the source node.
+    processor.connect(audioContext.createGain());
 
-    // Watchdog timer: ensure audioContext is active and send 16kHz WAV chunks every 2.0s
+    // Watchdog timer: ensure audioContext is active and send raw PCM chunks every 2.0s
     const wavInterval = setInterval(async () => {
       if (!isCapturing) {
         clearInterval(wavInterval);
@@ -753,16 +773,20 @@ async function startCapture() {
       if (pcmSamples.length > 0) {
         const samplesToEncode = pcmSamples;
         pcmSamples = [];
-        const wavBlob = encodeWAV(samplesToEncode, 16000);
-        if (wavBlob.size > 44) {
-          sendChunk(wavBlob, "LINEAR16", 16000).catch((err) => {
-            console.error("WAV chunk send error:", err);
+        const pcmBlob = encodeRawPCM(samplesToEncode);
+        if (pcmBlob.size > 0) {
+          sendChunkQueued(pcmBlob, "LINEAR16", 16000).catch((err) => {
+            console.error("PCM chunk send error:", err);
           });
         }
       }
     }, 2000);
 
-    // Parallel MediaRecorder Fallback: continuous WebM Opus recording for browsers where AudioContext is throttled
+    // Single MediaRecorder as the primary audio pipeline: continuous WebM Opus
+    // recording. The previous code ran THREE parallel pipelines (SpeechRecognition
+    // + ScriptProcessor + MediaRecorder) that flooded the backend with concurrent
+    // requests, causing pile-ups and freezes. Now SpeechRecognition handles text
+    // and MediaRecorder handles audio — one request at a time, never both.
     try {
       const mimeType = getSupportedMimeType();
       const audioOnlyStream = new MediaStream(audioTracks);
@@ -770,13 +794,13 @@ async function startCapture() {
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data && e.data.size > 0) {
-          sendChunk(e.data, "WEBM_OPUS", 48000).catch(err => console.log("MediaRecorder chunk note:", err));
+          sendChunkQueued(e.data, "WEBM_OPUS", 48000).catch(err => console.log("MediaRecorder chunk note:", err));
         }
       };
 
       mediaRecorder.start(2500); // Fire ondataavailable every 2.5s
     } catch (e) {
-      console.warn("MediaRecorder parallel setup note:", e);
+      console.warn("MediaRecorder setup note:", e);
     }
 
     
