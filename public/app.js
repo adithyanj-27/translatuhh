@@ -1,13 +1,10 @@
 
 const isCapacitor = typeof window.Capacitor !== "undefined";
 const SystemAudioCapture = isCapacitor ? window.Capacitor.Plugins.SystemAudioCapture : null;
-let rawServerUrl = (localStorage.getItem("backend_server_url") || "").trim();
-if (rawServerUrl.endsWith("/")) {
-  rawServerUrl = rawServerUrl.slice(0, -1);
+if (isCapacitor) {
+  try { localStorage.removeItem("backend_server_url"); } catch (e) {}
 }
-let serverUrl = (rawServerUrl && rawServerUrl.startsWith("http"))
-  ? rawServerUrl
-  : (isCapacitor ? "https://translatuhh.vercel.app" : "");
+let serverUrl = isCapacitor ? "https://translatuhh.vercel.app" : "";
 
 function getApiUrl(path) {
   let base = (isCapacitor && serverUrl) ? serverUrl.trim() : "";
@@ -604,14 +601,7 @@ async function startCapture() {
         stopCapture();
       });
 
-      // Automatically launch Picture-in-Picture Floating Subtitles on Desktop
-      if (!isCapacitor) {
-        setTimeout(() => {
-          if (!pipWindow && !document.pictureInPictureElement) {
-            togglePictureInPicture().catch((err) => console.log("PiP auto launch note:", err));
-          }
-        }, 400);
-      }
+
 
       return;
     } catch (error) {
@@ -778,12 +768,6 @@ async function startCapture() {
       console.warn("MediaRecorder parallel setup note:", e);
     }
 
-    // Automatically launch Picture-in-Picture Floating Subtitles as soon as capture begins!
-    setTimeout(() => {
-      if (!pipWindow && !document.pictureInPictureElement) {
-        togglePictureInPicture().catch((err) => console.log("PiP auto launch note:", err));
-      }
-    }, 400);
     
     mediaStream.getVideoTracks()[0]?.addEventListener("ended", stopCapture);
     audioTracks[0]?.addEventListener("ended", stopCapture);
@@ -990,7 +974,8 @@ if (pipButton) {
   pipButton.addEventListener("click", async () => {
     if (!mediaStream) {
       await startCapture();
-    } else {
+    }
+    if (mediaStream || isCapacitor) {
       togglePictureInPicture();
     }
   });
