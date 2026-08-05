@@ -122,18 +122,26 @@ function sendJson(response, statusCode, body) {
 async function transcribeWithGoogle(audioBuffer, apiKey, sourceLanguage, encoding = "WEBM_OPUS", sampleRate = 48000) {
   const base64Audio = audioBuffer.toString("base64");
   const speechCode = googleSpeechLanguageCodes[sourceLanguage] || "en-US";
-  
+  const alternativeCodes = ["en-US", "hi-IN", "bn-IN", "ta-IN", "te-IN", "es-ES"].filter(code => code !== speechCode);
+
+  const config = {
+    encoding: encoding,
+    languageCode: speechCode,
+    alternativeLanguageCodes: alternativeCodes
+  };
+
+  // Google STT API v1 rule: sampleRateHertz MUST NOT be set when encoding is WEBM_OPUS or OGG_OPUS
+  if (encoding !== "WEBM_OPUS" && encoding !== "OGG_OPUS") {
+    config.sampleRateHertz = sampleRate;
+  }
+
   const response = await fetch(
     `https://speech.googleapis.com/v1/speech:recognize?key=${apiKey}`,
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        config: {
-          encoding: encoding,
-          sampleRateHertz: sampleRate,
-          languageCode: speechCode
-        },
+        config: config,
         audio: {
           content: base64Audio
         }
@@ -154,37 +162,59 @@ async function transcribeWithGoogle(audioBuffer, apiKey, sourceLanguage, encodin
   return { original: transcript, detectedLanguage };
 }
 
-async function translateWithGoogle(text, targetLanguage, apiKey, contextText = "") {
-  const targetCode = googleLanguageCodes[targetLanguage] || "en";
-  const queryPayload = contextText ? [contextText, text] : text;
+async function translateFree(text, targetLanguage) {
+  try {
+    const targetCode = googleLanguageCodes[targetLanguage] || "en";
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetCode}&dt=t&q=${encodeURIComponent(text)}`;
+    const response = await fetch(url);
+    if (response.ok) {
+      const data = await response.json();
+      let translated = "";
+      if (Array.isArray(data?.[0])) {
+        for (const sentence of data[0]) {
+          if (sentence?.[0]) translated += sentence[0];
+        }
+      }
+      const detectedLanguage = data?.[2] || "auto";
+      if (translated) {
+        return { translated, detectedLanguage };
+      }
+    }
+  } catch (e) {
+    console.error("Free translation fallback error:", e);
+  }
+  return { translated: text, detectedLanguage: "auto" };
+}
 
-  const response = await fetch(
-    `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`,
-    {
+async function translateWithGoogle(text, targetLanguage, apiKey, contextText = "") {
+  try {
+    const targetCode = googleLanguageCodes[targetLanguage] || "en";
+    const url = `https://translation.googleapis.com/language/translate/v2?key=${apiKey}`;
+
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        q: queryPayload,
-        target: targetCode,
-        format: "text"
+        q: text,
+        target: targetCode
       })
-    }
-  );
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    console.error("Google Translate error:", errorText);
-    return { translated: text, detectedLanguage: "auto" };
+    if (response.ok) {
+      const data = await response.json();
+      const targetObj = data?.data?.translations?.[0];
+      const translated = targetObj?.translatedText || text;
+      const detectedLanguage = targetObj?.detectedSourceLanguage || "auto";
+      return { translated, detectedLanguage };
+    } else {
+      console.warn("Google Translate API key failed, falling back to free endpoint:", response.status);
+    }
+  } catch (e) {
+    console.warn("Google Translate API error, falling back to free endpoint:", e.message);
   }
 
-  const data = await response.json();
-  const translations = data.data?.translations || [];
-  const targetObj = translations.length > 1 ? translations[1] : translations[0];
-
-  const translated = targetObj?.translatedText || text;
-  const detectedLanguage = targetObj?.detectedSourceLanguage || "auto";
-
-  return { translated, detectedLanguage };
+  // Seamless fallback to free translation endpoint if API key is invalid/revoked
+  return await translateFree(text, targetLanguage);
 }
 
 async function handleAudioChunk(request, response) {
@@ -194,6 +224,7 @@ async function handleAudioChunk(request, response) {
   const contextText = request.headers["x-context-text"] || "";
   const encoding = request.headers["x-audio-encoding"] || "WEBM_OPUS";
   const sampleRate = parseInt(request.headers["x-audio-sample-rate"] || "48000", 10);
+  const textInput = request.headers["x-text-transcript"];
   const apiKey = process.env.GOOGLE_API_KEY;
 
   const hasRealApiKey = Boolean(
@@ -201,6 +232,34 @@ async function handleAudioChunk(request, response) {
     apiKey !== "your_google_api_key_here" &&
     apiKey.trim() !== ""
   );
+
+  // Handle direct text transcript translation (from native browser speech recognition)
+  if (textInput && textInput.trim()) {
+    if (hasRealApiKey) {
+      const translation = await translateWithGoogle(textInput.trim(), targetLanguage, apiKey, contextText);
+      sendJson(response, 200, {
+        id: randomUUID(),
+        mode: "google-text",
+        targetLanguage,
+        detectedLanguage: translation.detectedLanguage || "auto",
+        original: textInput.trim(),
+        translated: translation.translated,
+        createdAt: new Date().toISOString()
+      });
+      return;
+    }
+    const freeTranslation = await translateFree(textInput.trim(), targetLanguage);
+    sendJson(response, 200, {
+      id: randomUUID(),
+      mode: "free-text",
+      targetLanguage,
+      detectedLanguage: freeTranslation.detectedLanguage || "auto",
+      original: textInput.trim(),
+      translated: freeTranslation.translated,
+      createdAt: new Date().toISOString()
+    });
+    return;
+  }
 
   if (hasRealApiKey) {
     if (body.length > 0) {

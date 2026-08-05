@@ -637,6 +637,23 @@ button:disabled {
   border-bottom: 1px solid var(--panel-border);
 }
 
+.detected-language-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--muted-text, #94a3b8);
+}
+.detected-language-row .detected-label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 0.7rem;
+}
+.detected-language-row .detected-value {
+  font-weight: 700;
+  color: var(--accent, #0df2c9);
+}
+
 .pane-controls {
   display: flex;
   align-items: center;

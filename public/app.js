@@ -38,6 +38,16 @@ const fontSizeDec = document.querySelector("#fontSizeDec");
 const fontSizeInc = document.querySelector("#fontSizeInc");
 const previewVideo = document.querySelector("#previewVideo");
 
+// DOM elements referenced throughout the app — these MUST be declared or the
+// ES module throws a ReferenceError on first use and aborts the whole script,
+// which silently breaks capture, PiP, status, and every other binding.
+const captionList = document.querySelector("#captionList");
+const pipButton = document.querySelector("#pipButton");
+const statusPill = document.querySelector("#statusPill");
+const supportNote = document.querySelector("#supportNote");
+const audioMeter = document.querySelector("#audioMeter");
+const meterContext = audioMeter?.getContext("2d");
+
 const pipCanvas = document.querySelector("#pipCanvas");
 const pipCanvasCtx = pipCanvas?.getContext("2d");
 const pipVideo = document.querySelector("#pipVideo");
@@ -68,6 +78,7 @@ const isLikelyMobile = matchMedia("(max-width: 860px), (pointer: coarse)").match
 const sizeSteps = ["small", "medium", "large", "xlarge"];
 
 function setSupportMessage() {
+  if (!supportNote) return;
   if (!window.isSecureContext) {
     supportNote.hidden = false;
     supportNote.textContent =
