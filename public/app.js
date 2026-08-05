@@ -498,17 +498,17 @@ function initNativeSpeechRecognition() {
   }
 }
 
-// Serialize chunk requests so only one is in flight at a time. Without this,
-// a slow Google STT response (1-3s) causes concurrent requests to pile up,
-// eventually triggering 429/timeouts and the translation freeze.
-let chunkChain = Promise.resolve();
+// Only one chunk request in flight at a time. If the backend is still
+// processing the previous chunk, skip sending and let PCM samples keep
+// accumulating — the next interval will send a larger chunk. This prevents
+// the unbounded backlog that caused the translation freeze.
+let chunkInFlight = false;
 function sendChunkQueued(blob, encoding = "WEBM_OPUS", sampleRate = 48000) {
-  // Each step catches its own error so one failed chunk doesn't poison the
-  // chain and block all future chunks forever (the freeze).
-  chunkChain = chunkChain
-    .then(() => sendChunk(blob, encoding, sampleRate))
-    .catch(() => {});
-  return chunkChain;
+  if (chunkInFlight) return; // backend still busy — skip, audio keeps accumulating
+  chunkInFlight = true;
+  sendChunk(blob, encoding, sampleRate)
+    .catch((err) => { console.error("Chunk send error:", err); })
+    .finally(() => { chunkInFlight = false; });
 }
 
 async function sendChunk(blob, encoding = "WEBM_OPUS", sampleRate = 48000) {
@@ -581,23 +581,6 @@ function stopCapture() {
   lastCaptionTime = null;
   lastDetectedLanguage = null;
   lastCardElement = null;
-}
-
-function getSupportedMimeType() {
-  const types = [
-    "audio/webm;codecs=opus",
-    "audio/webm",
-    "audio/ogg;codecs=opus",
-    "audio/ogg",
-    "audio/mp4",
-    "audio/wav"
-  ];
-  for (const type of types) {
-    if (MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(type)) {
-      return type;
-    }
-  }
-  return "";
 }
 
 async function startCapture() {
@@ -737,10 +720,14 @@ async function startCapture() {
     sourceNode.connect(analyser);
     drawMeter();
 
-    // Continuous 16kHz Mono PCM WAV Audio Capture Processor
+    // Continuous 16kHz Mono PCM Audio Capture via ScriptProcessor.
+    // This is the SOLE audio pipeline — MediaRecorder is intentionally NOT used
+    // because start(timeslice) produces fragmented WebM chunks where only the
+    // first has the EBML container header; Google STT can only decode the first
+    // chunk and returns empty for all the rest (the original freeze cause).
     const sampleRate = audioContext.sampleRate || 48000;
     const downsampleRatio = Math.max(1, Math.round(sampleRate / 16000));
-    
+
     let pcmSamples = [];
     const processor = audioContext.createScriptProcessor(4096, 1, 1);
 
@@ -753,16 +740,21 @@ async function startCapture() {
     };
 
     sourceNode.connect(processor);
-    // Do NOT connect processor to audioContext.destination — that pipes the
-    // captured audio back through the speakers, creating an echo loop and
-    // feeding the STT engine its own output. The ScriptProcessor still fires
-    // onaudioprocess as long as it's connected to the source node.
-    processor.connect(audioContext.createGain());
 
-    // Watchdog timer: ensure audioContext is active and send raw PCM chunks every 2.0s
-    const wavInterval = setInterval(async () => {
+    // A ScriptProcessorNode only fires onaudioprocess when connected to the
+    // destination (directly or through a chain). Connecting directly causes an
+    // echo (captured audio plays through speakers). Solution: route through a
+    // zero-gain node so the processing graph is "live" but no sound is emitted.
+    const zeroGain = audioContext.createGain();
+    zeroGain.gain.value = 0;
+    processor.connect(zeroGain);
+    zeroGain.connect(audioContext.destination);
+
+    // Send raw PCM chunks every 2.0s. Raw 16-bit PCM with no container header
+    // is exactly what Google STT LINEAR16 encoding expects.
+    const pcmInterval = setInterval(async () => {
       if (!isCapturing) {
-        clearInterval(wavInterval);
+        clearInterval(pcmInterval);
         return;
       }
 
@@ -781,27 +773,6 @@ async function startCapture() {
         }
       }
     }, 2000);
-
-    // Single MediaRecorder as the primary audio pipeline: continuous WebM Opus
-    // recording. The previous code ran THREE parallel pipelines (SpeechRecognition
-    // + ScriptProcessor + MediaRecorder) that flooded the backend with concurrent
-    // requests, causing pile-ups and freezes. Now SpeechRecognition handles text
-    // and MediaRecorder handles audio — one request at a time, never both.
-    try {
-      const mimeType = getSupportedMimeType();
-      const audioOnlyStream = new MediaStream(audioTracks);
-      mediaRecorder = new MediaRecorder(audioOnlyStream, { mimeType: mimeType || undefined });
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data && e.data.size > 0) {
-          sendChunkQueued(e.data, "WEBM_OPUS", 48000).catch(err => console.log("MediaRecorder chunk note:", err));
-        }
-      };
-
-      mediaRecorder.start(2500); // Fire ondataavailable every 2.5s
-    } catch (e) {
-      console.warn("MediaRecorder setup note:", e);
-    }
 
     
     mediaStream.getVideoTracks()[0]?.addEventListener("ended", stopCapture);

@@ -1,4 +1,4 @@
-const CACHE_NAME = "translatuhh-v14";
+const CACHE_NAME = "translatuhh-v16";
 const ASSETS = [
   "/",
   "/index.html",
@@ -36,8 +36,12 @@ self.addEventListener("activate", (event) => {
 
 // Network-First Strategy: Always fetch fresh content from server first
 self.addEventListener("fetch", (event) => {
-  // Skip non-GET and API requests
-  if (event.request.method !== "GET" || event.request.url.includes("/api/")) {
+  // Skip non-GET, API requests, and non-http(s) schemes (chrome-extension:, etc.)
+  if (
+    event.request.method !== "GET" ||
+    event.request.url.includes("/api/") ||
+    !event.request.url.startsWith("http")
+  ) {
     return;
   }
 
