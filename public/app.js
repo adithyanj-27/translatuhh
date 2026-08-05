@@ -41,14 +41,6 @@ const fontSizeDec = document.querySelector("#fontSizeDec");
 const fontSizeInc = document.querySelector("#fontSizeInc");
 const previewVideo = document.querySelector("#previewVideo");
 
-// Show Backend Server URL row only on Capacitor
-const serverUrlRow = document.querySelector("#serverUrlRow");
-if (serverUrlRow && !isCapacitor) {
-  serverUrlRow.style.display = "none";
-}
-if (serverUrlRow && isCapacitor) {
-  serverUrlRow.style.display = "block";
-}
 const pipCanvas = document.querySelector("#pipCanvas");
 const pipCanvasCtx = pipCanvas?.getContext("2d");
 const pipVideo = document.querySelector("#pipVideo");
@@ -1030,23 +1022,8 @@ updateThemeIcons(document.documentElement.getAttribute("data-theme") || "dark");
 setSupportMessage();
 resetMeter();
 
-// Set up server URL input bindings for Capacitor
-const serverUrlInput = document.querySelector("#serverUrlInput");
-const saveServerUrlBtn = document.querySelector("#saveServerUrlBtn");
-if (serverUrlInput) serverUrlInput.value = serverUrl;
-if (saveServerUrlBtn && serverUrlInput) {
-  saveServerUrlBtn.addEventListener("click", async () => {
-    let val = serverUrlInput.value.trim();
-    if (val && val.endsWith("/")) {
-      val = val.substring(0, val.length - 1);
-    }
-    localStorage.setItem("backend_server_url", val);
-    serverUrl = val;
-    setStatus("Connecting...");
-    await checkApiStatus();
-    setStatus("Idle");
-  });
-}
+
+
 
 // Make API badge double as a manual Refresh button
 const apiBadge = document.querySelector("#apiBadge");
